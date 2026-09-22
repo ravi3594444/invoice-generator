@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Generator Wireframes</title>
+<style>
+  :root{--ink:#1f1f1f;--mute:#767676;--line:#bdbdbd;--box:#efefef;--box2:#dcdcdc;--bg:#f5f5f5;--paper:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eee;padding:1px 5px;border-radius:3px}
+  header.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);padding:12px 16px}
+  header.top h1{margin:0 0 6px;font-size:16px}
+  header.top p{margin:0 0 8px;color:var(--mute);font-size:12px}
+  nav.jump{display:flex;flex-wrap:wrap;gap:6px}
+  nav.jump a{font-size:12px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;background:var(--paper)}
+  main{max-width:1200px;margin:0 auto;padding:16px}
+  section.screen{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;margin:0 0 28px}
+  section.screen>h2{margin:0 0 4px;font-size:18px}
+  section.screen>p.meta{margin:0 0 14px;color:var(--mute);font-size:13px}
+  .split{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+  .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+  .split.dash{grid-template-columns:minmax(0,1fr) 340px}
+  .notes{font-size:13px}
+  .notes ol{margin:0;padding-left:20px}
+  .notes li{margin:0 0 8px}
+  .notes.under{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+  .frame{border:2px solid var(--ink);border-radius:10px;background:var(--paper);overflow:hidden;max-width:100%}
+  .frame:not(.mobile){overflow-x:auto}
+  .frame.mobile{width:100%;max-width:360px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);background:#f2f2f2;font-size:12px;color:var(--mute)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex:none}
+  .url{flex:1;background:#fff;border:1px solid var(--line);border-radius:4px;padding:3px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pad{padding:14px}
+  .box{border:1px dashed var(--line);background:var(--box);border-radius:4px;padding:8px;color:var(--mute);font-size:12px}
+  .solid{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:10px}
+  .img{background:repeating-linear-gradient(45deg,#e4e4e4 0 6px,#f3f3f3 6px 12px);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px;border-radius:4px;flex:none;text-align:center;padding:4px}
+  .btn{display:inline-block;border:1px solid var(--ink);border-radius:6px;padding:7px 12px;font-size:13px;background:var(--paper);white-space:nowrap}
+  .btn.primary{background:var(--ink);color:#fff}
+  .btn.block{display:block;text-align:center}
+  .btn.sm{padding:4px 8px;font-size:12px}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:11px;background:#f2f2f2;white-space:nowrap}
+  .pill.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .c{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:600;flex:none}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row.between{justify-content:space-between}
+  .row.nowrap{flex-wrap:nowrap}
+  .stack{display:grid;gap:10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .h{font-weight:600;font-size:13px}
+  .sub{font-size:11px;color:var(--mute)}
+  .big{font-size:28px;font-weight:700;line-height:1.1}
+  .num{font-size:22px;font-weight:700}
+  table.w{width:100%;border-collapse:collapse;font-size:12px}
+  table.w th,table.w td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+  table.w th{color:var(--mute);font-weight:600}
+  table.w .r{text-align:right}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow:auto}
+  .tabs span{padding:6px 10px;font-size:12px;color:var(--mute);white-space:nowrap}
+  .tabs span.on{color:var(--ink);border-bottom:2px solid var(--ink);font-weight:600}
+  .input{border:1px solid var(--line);border-radius:4px;padding:7px 8px;font-size:12px;color:var(--mute);background:#fff}
+  .label{display:block;font-size:11px;color:var(--mute);margin-bottom:3px}
+  .shell{display:grid;grid-template-columns:170px 1fr;min-height:380px}
+  .side{border-right:1px solid var(--line);padding:10px;background:#f7f7f7;font-size:13px}
+  .side .brand{font-weight:700;padding:6px 8px 12px}
+  .side .item{padding:7px 8px;border-radius:4px;color:var(--mute);white-space:nowrap}
+  .side .item.on{background:#e3e3e3;color:var(--ink);font-weight:600}
+  .content{padding:14px;min-width:0}
+  .toggle{width:30px;height:16px;border-radius:999px;background:#bbb;position:relative;display:inline-block;vertical-align:middle}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff}
+  .toggle.on{background:var(--ink)}.toggle.on::after{left:16px}
+  .pdf{border:1px solid var(--line);background:#fff;padding:12px;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .foot{color:var(--mute);font-size:11px;text-align:center;padding:12px 0 0}
+  .tabbar{display:flex;border-top:1px solid var(--line);background:#f7f7f7}
+  .tabbar span{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--mute)}
+  .tabbar span.on{color:var(--ink);font-weight:600}
+  @media (max-width:860px){
+    .split,.split.dash,.two{grid-template-columns:minmax(0,1fr)}
+    .frame:not(.mobile) .shell,.frame:not(.mobile)>.pad{min-width:640px}
+    .frame.mobile .grid3{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Invoice Generator · low-fidelity wireframes</h1>
+  <p>Layout and content only. Grey dashed boxes are placeholder content, striped boxes are images, black buttons are the primary action on each screen. Colour, type and spacing are yours to design. Companion to <code>docs/plan.md</code>.</p>
+  <nav class="jump">
+    <a href="#public-invoice">1 Public invoice</a>
+    <a href="#editor">2 Invoice editor</a>
+    <a href="#dashboard">3 Dashboard</a>
+    <a href="#invoices">4 Invoices list</a>
+    <a href="#reminders">5 Reminders</a>
+    <a href="#settings">6 Settings</a>
+    <a href="#contract">7 Public contract</a>
+    <a href="#landing">8 Landing</a>
+  </nav>
+</header>
+<main>
+
+<!-- 1 PUBLIC INVOICE -->
+<section class="screen" id="public-invoice">
+  <h2>1 · Public invoice page <code>/i/[token]</code></h2>
+  <p class="meta">What the client sees after tapping the link in WhatsApp. Mobile first, no login, loads fast. This is the screen that gets you paid, so it deserves the most design attention.</p>
+  <div class="split">
+    <div class="frame mobile">
+      <div class="bar"><span class="url">yourapp.com/i/8fK2…</span></div>
+      <div class="pad stack">
+        <div class="row between nowrap">
+          <div class="row nowrap"><div class="img" style="width:36px;height:36px">logo</div><div><div class="h">Priya Designs</div><div class="sub">priya@… · +91 98…</div></div></div>
+          <span class="row nowrap"><span class="c">1</span><span class="pill">Due in 3 days</span></span>
+        </div>
+        <div>
+          <div class="sub">Invoice INV-0012</div>
+          <div class="row nowrap"><span class="big">₹5,000</span><span class="c">2</span></div>
+          <div class="sub">Due 3 Oct 2026 · Issued 19 Sep 2026</div>
+        </div>
+        <div class="box"><b>Billed to</b><br>Rahul Mehta · Acme Studio · rahul@acme.in</div>
+        <table class="w">
+          <tr><th>Item</th><th class="r">Qty</th><th class="r">Amount</th></tr>
+          <tr><td>Logo design</td><td class="r">1</td><td class="r">₹4,000</td></tr>
+          <tr><td>Extra revisions</td><td class="r">2</td><td class="r">₹1,000</td></tr>
+          <tr><td colspan="2" class="sub">Subtotal</td><td class="r">₹5,000</td></tr>
+          <tr><td colspan="2" class="sub">Tax (0%)</td><td class="r">₹0</td></tr>
+          <tr><td colspan="2"><b>Total due</b></td><td class="r"><b>₹5,000</b></td></tr>
+        </table>
+        <div class="solid stack">
+          <div class="row between"><div class="h">Pay ₹5,000</div><span class="c">3</span></div>
+          <span class="btn primary block">Pay with UPI</span>
+          <div class="row" style="justify-content:center"><div class="img" style="width:110px;height:110px">UPI QR</div></div>
+          <div class="row between" style="font-size:12px"><span>UPI ID: <b>priya@okaxis</b></span><span class="pill">Copy</span></div>
+          <span class="btn block">Pay by card</span>
+          <span class="btn block">PayPal</span>
+          <div class="sub" style="text-align:center">Paid already? Message Priya on WhatsApp</div>
+        </div>
+        <div class="row nowrap"><span class="c">4</span><div class="grid2" style="flex:1"><span class="btn block">Download PDF</span><span class="btn block">WhatsApp Priya</span></div></div>
+        <div class="box"><b>Notes</b> · Thanks for working with me!<br><b>Terms</b> · Payment due within 14 days of the invoice date.</div>
+        <div class="foot">Made with Invoice Generator</div>
+      </div>
+    </div>
+    <div class="notes"><ol>
+      <li><b>Status pill</b> is computed on load: Due in N days · Due today · Overdue by N days · Paid. When paid, the Pay card is replaced by a receipt line.</li>
+      <li><b>Amount due</b> is the largest element on the page. The client should know what to pay in one glance.</li>
+      <li><b>Pay card</b> lists only the methods enabled in Settings. The UPI button opens the app chooser on phones, the QR is for desktop, and the copyable UPI ID is the fallback when apps block intent links from personal IDs. "Pay by card" is a Razorpay or Stripe payment link.</li>
+      <li><b>Download PDF</b> calls the server PDF route; <b>WhatsApp</b> opens wa.me to the freelancer's number.</li>
+      <li>Invisible: on load the page POSTs a "viewed" beacon, so the invoice shows as <i>Viewed</i> in the freelancer's app.</li>
+      <li>Open Graph tags make the WhatsApp preview card read "INV-0012 · ₹5,000 · Due 3 Oct 2026 · Priya Designs".</li>
+    </ol></div>
+  </div>
+</section>
+
+<!-- 2 INVOICE EDITOR -->
+<section class="screen" id="editor">
+  <h2>2 · Invoice editor <code>/app/invoices/new</code></h2>
+  <p class="meta">Form on the left, live preview on the right. On mobile the panes stack behind a Preview toggle. Works without login; drafts save to the device.</p>
+  <div class="frame">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">yourapp.com/app/invoices/new</span></div>
+    <div class="shell">
+      <aside class="side"><div class="brand">Invoice Gen</div><div class="item">Dashboard</div><div class="item on">Invoices</div><div class="item">Contracts</div><div class="item">Clients</div><div class="item">Reminders</div><div class="item">Settings</div></aside>
+      <div class="content stack">
+        <div class="row between">
+          <div class="row"><span class="sub">← Invoices</span><span class="h">New invoice</span><span class="pill">Draft</span></div>
+          <div class="row"><span class="btn sm">Save draft</span><span class="btn sm">Download PDF</span><span class="btn sm">Copy link</span><span class="btn sm primary">Send ▾</span></div>
+        </div>
+        <div class="two">
+          <div class="stack">
+            <div><span class="label">Client</span><div class="input">Search client or + Add new…</div></div>
+            <div class="grid3">
+              <div><span class="label">Invoice #</span><div class="input">INV-0012 (auto)</div></div>
+              <div><span class="label">Issue date</span><div class="input">19 Sep 2026</div></div>
+              <div><span class="label">Due date</span><div class="input">3 Oct 2026</div><div class="row" style="margin-top:4px"><span class="pill">7d</span><span class="pill">14d</span><span class="pill">30d</span></div></div>
+            </div>
+            <div>
+              <span class="label">Line items</span>
+              <table class="w">
+                <tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th><th></th></tr>
+                <tr><td>Logo design</td><td class="r">1</td><td class="r">4,000</td><td class="r">4,000</td><td>✕</td></tr>
+                <tr><td>Extra revisions</td><td class="r">2</td><td class="r">500</td><td class="r">1,000</td><td>✕</td></tr>
+              </table>
+              <div class="pill" style="margin-top:6px">+ Add item</div>
+            </div>
+            <div class="grid2">
+              <div><span class="label">Discount (₹ or %)</span><div class="input">0</div></div>
+              <div><span class="label">Tax %</span><div class="input">0 (GST optional)</div></div>
+            </div>
+            <div class="row between"><span class="sub">Subtotal ₹5,000 · Tax ₹0</span><span class="h">Total ₹5,000</span></div>
+            <div><span class="label">Notes (client sees this)</span><div class="input" style="height:44px">Thanks for working with me!</div></div>
+            <div><span class="label">Terms</span><div class="input" style="height:44px">Payment due within 14 days…</div></div>
+            <div class="solid">
+              <div class="h" style="margin-bottom:6px">Payment methods</div>
+              <div class="row" style="gap:16px;font-size:12px"><span><span class="toggle on"></span> UPI</span><span><span class="toggle on"></span> Card</span><span><span class="toggle"></span> PayPal</span></div>
+            </div>
+            <div class="solid">
+              <div class="row between"><div class="h">Automatic reminders</div><span class="toggle on"></span></div>
+              <div class="sub" style="margin-top:6px">3 days before · due day · 3 days after · 7 days after &nbsp;·&nbsp; Tone: <span class="pill dark">Auto</span> <span class="pill">Friendly</span> <span class="pill">Neutral</span> <span class="pill">Firm</span> &nbsp;·&nbsp; via Email + WhatsApp nudge</div>
+            </div>
+          </div>
+          <div>
+            <span class="label">Live preview (same template as the PDF)</span>
+            <div class="pdf stack">
+              <div class="row between nowrap"><div class="img" style="width:40px;height:40px">logo</div><div style="text-align:right"><b>INVOICE</b><br>INV-0012</div></div>
+              <div class="grid2"><div><b>From</b><br>Priya Designs<br>Bengaluru</div><div><b>To</b><br>Rahul Mehta<br>Acme Studio</div></div>
+              <div class="grid2"><div>Issued: 19 Sep 2026</div><div>Due: 3 Oct 2026</div></div>
+              <table class="w"><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr><tr><td>Logo design</td><td class="r">1</td><td class="r">4,000</td><td class="r">4,000</td></tr><tr><td>Extra revisions</td><td class="r">2</td><td class="r">500</td><td class="r">1,000</td></tr><tr><td colspan="3"><b>Total</b></td><td class="r"><b>₹5,000</b></td></tr></table>
+              <div class="row between nowrap"><div>Pay via UPI: priya@okaxis<br>Card / PayPal: links on the invoice page</div><div class="img" style="width:60px;height:60px">QR</div></div>
+              <div class="sub">Notes · Terms</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes under"><ol>
+    <li><b>Send ▾</b> offers WhatsApp / Email / Both. Sending assigns the number, sets status Sent, creates the reminder rows, and returns the link plus a pre-filled wa.me URL.</li>
+    <li>Totals are live in the form and recomputed on the server; client-side numbers are never trusted.</li>
+    <li>Payment-method toggles only list the methods configured in Settings → Payments.</li>
+    <li>Defaults for due days, tax, notes, terms and the reminder preset come from Settings → Invoice defaults.</li>
+  </ol></div>
+</section>
+
+<!-- 3 DASHBOARD -->
+<section class="screen" id="dashboard">
+  <h2>3 · Dashboard <code>/app</code></h2>
+  <p class="meta">First screen after login. Answers "who owes me money and what should I do about it today?" Desktop (sidebar) and mobile (bottom tabs) shown.</p>
+  <div class="split dash">
+    <div class="frame">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">yourapp.com/app</span></div>
+      <div class="shell">
+        <aside class="side"><div class="brand">Invoice Gen</div><div class="item on">Dashboard</div><div class="item">Invoices</div><div class="item">Contracts</div><div class="item">Clients</div><div class="item">Reminders</div><div class="item">Settings</div></aside>
+        <div class="content stack">
+          <div class="row between"><div class="h">Good morning, Priya</div><span class="btn sm primary">+ New invoice</span></div>
+          <div class="grid3">
+            <div class="solid"><div class="sub">Outstanding</div><div class="num">₹18,500</div><div class="sub">4 invoices</div></div>
+            <div class="solid"><div class="sub">Overdue</div><div class="num">₹6,000</div><div class="sub">2 invoices</div></div>
+            <div class="solid"><div class="sub">Paid this month</div><div class="num">₹32,000</div><div class="sub">6 invoices</div></div>
+          </div>
+          <div class="solid stack">
+            <div class="h">Needs attention</div>
+            <div class="row between"><div><b>INV-0009</b> · Acme Studio · ₹4,000<div class="sub">Overdue by 6 days · viewed twice</div></div><div class="row nowrap"><span class="btn sm">Remind on WhatsApp</span><span class="btn sm">Email</span><span class="btn sm">Mark paid</span></div></div>
+            <div class="row between"><div><b>INV-0011</b> · Neha Kapoor · ₹2,000<div class="sub">Overdue by 2 days · not viewed yet</div></div><div class="row nowrap"><span class="btn sm">Remind on WhatsApp</span><span class="btn sm">Email</span><span class="btn sm">Mark paid</span></div></div>
+            <div class="row between"><div><b>INV-0012</b> · Rahul Mehta · ₹5,000<div class="sub">Due in 3 days · reminder scheduled for 30 Sep</div></div><div class="row nowrap"><span class="btn sm">Copy link</span></div></div>
+          </div>
+          <div class="solid stack">
+            <div class="h">Recent activity</div>
+            <div class="sub">Rahul Mehta viewed INV-0012 · 2 h ago</div>
+            <div class="sub">Reminder emailed to Acme Studio for INV-0009 · today 09:00</div>
+            <div class="sub">INV-0007 marked paid via UPI · yesterday</div>
+            <div class="sub">Contract "Brand refresh" accepted by Neha Kapoor · 2 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="frame mobile" style="max-width:300px">
+        <div class="bar"><span class="url">yourapp.com/app</span></div>
+        <div class="pad stack">
+          <div class="row between"><div class="h">Hi Priya</div><span class="btn sm primary">+ New</span></div>
+          <div class="grid2"><div class="solid"><div class="sub">Outstanding</div><div class="num">₹18.5k</div></div><div class="solid"><div class="sub">Overdue</div><div class="num">₹6k</div></div></div>
+          <div class="solid stack">
+            <div class="h">Needs attention</div>
+            <div><b>INV-0009</b> · Acme · ₹4,000<div class="sub">Overdue 6 days</div><div class="row" style="margin-top:6px"><span class="btn sm">WhatsApp</span><span class="btn sm">Mark paid</span></div></div>
+            <div><b>INV-0011</b> · Neha · ₹2,000<div class="sub">Overdue 2 days</div><div class="row" style="margin-top:6px"><span class="btn sm">WhatsApp</span><span class="btn sm">Mark paid</span></div></div>
+          </div>
+          <div class="box">Recent activity…</div>
+        </div>
+        <div class="tabbar"><span class="on">Home</span><span>Invoices</span><span>Clients</span><span>More</span></div>
+      </div>
+      <div class="notes"><ol>
+        <li>Stat tiles are tappable and open the invoices list pre-filtered.</li>
+        <li><b>Remind on WhatsApp</b> opens wa.me with the reminder text already filled in. One tap, then Send.</li>
+        <li>On mobile the sidebar becomes four bottom tabs; Contracts, Reminders and Settings live under More.</li>
+      </ol></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 INVOICES LIST -->
+<section class="screen" id="invoices">
+  <h2>4 · Invoices list <code>/app/invoices</code></h2>
+  <p class="meta">Filter, search, and act on any invoice without opening it.</p>
+  <div class="frame">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">yourapp.com/app/invoices?status=overdue</span></div>
+    <div class="shell">
+      <aside class="side"><div class="brand">Invoice Gen</div><div class="item">Dashboard</div><div class="item on">Invoices</div><div class="item">Contracts</div><div class="item">Clients</div><div class="item">Reminders</div><div class="item">Settings</div></aside>
+      <div class="content stack">
+        <div class="row between"><div class="h">Invoices</div><div class="row"><div class="input" style="width:200px">Search client or number…</div><span class="btn sm primary">+ New invoice</span></div></div>
+        <div class="tabs"><span>All (14)</span><span>Draft (1)</span><span>Sent (3)</span><span>Viewed (2)</span><span class="on">Overdue (2)</span><span>Paid (6)</span></div>
+        <table class="w">
+          <tr><th>Number</th><th>Client</th><th class="r">Amount</th><th>Due</th><th>Status</th><th></th></tr>
+          <tr><td>INV-0009</td><td>Acme Studio</td><td class="r">₹4,000</td><td>16 Sep</td><td><span class="pill dark">Overdue 6d</span></td><td class="r">⋯</td></tr>
+          <tr><td>INV-0011</td><td>Neha Kapoor</td><td class="r">₹2,000</td><td>20 Sep</td><td><span class="pill dark">Overdue 2d</span></td><td class="r">⋯</td></tr>
+          <tr><td>INV-0012</td><td>Rahul Mehta</td><td class="r">₹5,000</td><td>3 Oct</td><td><span class="pill">Viewed</span></td><td class="r">⋯</td></tr>
+          <tr><td>INV-0010</td><td>Sana Iyer</td><td class="r">₹7,500</td><td>28 Sep</td><td><span class="pill">Sent</span></td><td class="r">⋯</td></tr>
+          <tr><td>—</td><td>Arjun Rao</td><td class="r">₹1,200</td><td>—</td><td><span class="pill">Draft</span></td><td class="r">⋯</td></tr>
+        </table>
+        <div class="box" style="max-width:280px"><b>⋯ menu</b><br>Copy link · Send on WhatsApp · Send email · Download PDF · Mark paid · Duplicate · Delete</div>
+      </div>
+    </div>
+  </div>
+  <div class="notes under"><ol>
+    <li>"Overdue" is a computed filter (Sent or Viewed, past the due date), not a stored status.</li>
+    <li>Drafts have no number yet; the number is assigned when the invoice is first sent.</li>
+    <li>Empty state: illustration placeholder + "Create your first invoice" button.</li>
+  </ol></div>
+</section>
+
+<!-- 5 REMINDERS -->
+<section class="screen" id="reminders">
+  <h2>5 · Reminders <code>/app/reminders</code></h2>
+  <p class="meta">Everything scheduled, everything sent, and the message templates. Tabs: Upcoming · Sent · Templates.</p>
+  <div class="two">
+    <div class="frame">
+      <div class="bar"><span class="url">yourapp.com/app/reminders</span></div>
+      <div class="pad stack">
+        <div class="tabs"><span class="on">Upcoming (5)</span><span>Sent (12)</span><span>Templates</span></div>
+        <table class="w">
+          <tr><th>When</th><th>Invoice</th><th>Channel</th><th>Tone</th><th></th></tr>
+          <tr><td>Today</td><td>INV-0009 · Acme · ₹4,000<div class="sub">7 days after due</div></td><td>WhatsApp</td><td>Firm</td><td class="r"><span class="btn sm">Send now</span> <span class="pill">Skip</span></td></tr>
+          <tr><td>30 Sep</td><td>INV-0012 · Rahul · ₹5,000<div class="sub">3 days before due</div></td><td>Email</td><td>Friendly</td><td class="r"><span class="btn sm">Send now</span> <span class="pill">Skip</span></td></tr>
+          <tr><td>3 Oct</td><td>INV-0012 · Rahul · ₹5,000<div class="sub">due day</div></td><td>Email + WhatsApp</td><td>Neutral</td><td class="r"><span class="btn sm">Send now</span> <span class="pill">Skip</span></td></tr>
+          <tr><td>6 Oct</td><td>INV-0012 · Rahul · ₹5,000<div class="sub">3 days after due</div></td><td>Email + WhatsApp</td><td>Firm</td><td class="r"><span class="btn sm">Send now</span> <span class="pill">Skip</span></td></tr>
+        </table>
+        <div class="box">Daily send time: morning, 09:00 IST · change in Settings → Reminders</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="bar"><span class="url">yourapp.com/app/reminders#templates</span></div>
+      <div class="pad stack">
+        <div class="tabs"><span>Upcoming (5)</span><span>Sent (12)</span><span class="on">Templates</span></div>
+        <div class="row"><span class="pill dark">Friendly</span><span class="pill">Neutral</span><span class="pill">Firm</span></div>
+        <div class="input" style="height:96px;color:var(--ink)">Hi {client_name}! Quick heads-up that invoice {invoice_number} for {amount} is due on {due_date}. You can view and pay it here: {link}. Thanks so much! – {freelancer_name}</div>
+        <div class="row"><span class="pill">{client_name}</span><span class="pill">{invoice_number}</span><span class="pill">{amount}</span><span class="pill">{due_date}</span><span class="pill">{link}</span><span class="pill">{freelancer_name}</span></div>
+        <div class="solid"><div class="sub">Preview</div>Hi Rahul! Quick heads-up that invoice INV-0012 for ₹5,000 is due on 3 Oct 2026. You can view and pay it here: yourapp.com/i/8fK2… Thanks so much! – Priya</div>
+        <div class="row"><span class="btn sm primary">Save</span><span class="pill">Reset to default</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes under"><ol>
+    <li>Email reminders go to the client automatically. WhatsApp reminders cannot be sent on the user's behalf without the Business API, so on the scheduled day the freelancer gets a nudge (email + this list) with a one-tap wa.me link.</li>
+    <li>Tone "Auto" escalates: Friendly before due, Neutral on the due day, Firm after. The user can pin a tone per invoice.</li>
+    <li>Marking an invoice paid skips its remaining reminders.</li>
+  </ol></div>
+</section>
+
+<!-- 6 SETTINGS -->
+<section class="screen" id="settings">
+  <h2>6 · Settings → Payments <code>/app/settings</code></h2>
+  <p class="meta">Tabs: Business · Payments · Invoice defaults · Reminders · Data. The Payments tab is where the "we never touch money" model lives.</p>
+  <div class="frame">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">yourapp.com/app/settings/payments</span></div>
+    <div class="shell">
+      <aside class="side"><div class="brand">Invoice Gen</div><div class="item">Dashboard</div><div class="item">Invoices</div><div class="item">Contracts</div><div class="item">Clients</div><div class="item">Reminders</div><div class="item on">Settings</div></aside>
+      <div class="content stack">
+        <div class="tabs"><span>Business</span><span class="on">Payments</span><span>Invoice defaults</span><span>Reminders</span><span>Data</span></div>
+        <div class="grid2">
+          <div class="solid stack">
+            <div class="row between"><div class="h">UPI</div><span class="toggle on"></span></div>
+            <div><span class="label">UPI ID</span><div class="input">priya@okaxis</div></div>
+            <div><span class="label">Payee name (shown in the UPI app)</span><div class="input">Priya Sharma</div></div>
+            <div class="sub">Shown as a button, a QR code and copyable text on every invoice.</div>
+            <span class="pill">Test link</span>
+          </div>
+          <div class="solid stack">
+            <div class="row between"><div class="h">Card · Razorpay / Stripe</div><span class="toggle on"></span></div>
+            <div><span class="label">Payment link URL</span><div class="input">https://rzp.io/l/priya-designs</div></div>
+            <div class="sub">Create a payment link in your Razorpay or Stripe dashboard and paste it here.</div>
+            <span class="pill">Test link</span>
+          </div>
+          <div class="solid stack">
+            <div class="row between"><div class="h">PayPal</div><span class="toggle"></span></div>
+            <div><span class="label">PayPal.me handle</span><div class="input">paypal.me/priyadesigns</div></div>
+            <div class="sub">Amount and currency are appended automatically.</div>
+          </div>
+          <div class="solid stack">
+            <div class="row between"><div class="h">Custom link</div><span class="toggle"></span></div>
+            <div><span class="label">Label</span><div class="input">Bank transfer</div></div>
+            <div><span class="label">URL</span><div class="input">https://…</div></div>
+            <div class="sub">Wise, a bank-details page, anything with a URL.</div>
+          </div>
+        </div>
+        <div class="row"><span class="btn sm primary">Save</span><span class="sub">Nothing here is secret: these are public payment handles. Card and bank details are never stored.</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes under"><ol>
+    <li><b>Business</b>: name, logo upload, address, tax ID (GSTIN / VAT, optional), WhatsApp number.</li>
+    <li><b>Invoice defaults</b>: currency, number prefix and next number, default tax %, default due days, default notes and terms.</li>
+    <li><b>Reminders</b>: default schedule preset, default tone, channels, daily send time.</li>
+    <li><b>Data</b>: Export JSON · Import · Delete account.</li>
+  </ol></div>
+</section>
+
+<!-- 7 PUBLIC CONTRACT -->
+<section class="screen" id="contract">
+  <h2>7 · Public contract <code>/c/[token]</code></h2>
+  <p class="meta">A one-page micro-contract the client reads and accepts on their phone. Acceptance records name, time, IP and device, and emails both parties.</p>
+  <div class="split">
+    <div class="frame mobile">
+      <div class="bar"><span class="url">yourapp.com/c/Qm7x…</span></div>
+      <div class="pad stack">
+        <div class="row between nowrap"><div class="row nowrap"><div class="img" style="width:36px;height:36px">logo</div><div class="h">Priya Designs</div></div><span class="pill">Awaiting acceptance</span></div>
+        <div><div class="sub">Contract</div><div class="big" style="font-size:20px">Brand refresh for Acme Studio</div><div class="sub">Between Priya Sharma (freelancer) and Rahul Mehta, Acme Studio (client)</div></div>
+        <div class="solid"><div class="h">Scope</div><div class="sub">Logo redesign, colour palette, typography guide and social media templates for Acme Studio.</div></div>
+        <div class="solid"><div class="h">Deliverables</div><div class="sub">☐ Logo (SVG, PNG) &nbsp; ☐ Colour palette &nbsp; ☐ Type guide (PDF) &nbsp; ☐ 6 social templates</div></div>
+        <div class="grid2"><div class="solid"><div class="sub">Price</div><div class="num">₹25,000</div><div class="sub">50% upfront · 50% on delivery</div></div><div class="solid"><div class="sub">Timeline</div><div class="h">1 Oct → 21 Oct 2026</div><div class="sub">2 rounds of revisions</div></div></div>
+        <div class="box"><b>Terms</b> · Late payments incur 2% per week · Cancellation: 50% deposit non-refundable · Source files delivered on full payment.</div>
+        <div class="solid stack">
+          <div class="h">Accept this contract</div>
+          <div><span class="label">Your full name</span><div class="input">Type your name</div></div>
+          <div class="sub">☐ I have read and agree to the terms above</div>
+          <span class="btn primary block">Accept contract</span>
+          <div class="sub" style="text-align:center">Questions? Message Priya on WhatsApp</div>
+        </div>
+        <div class="grid2"><span class="btn block">Download PDF</span><span class="btn block">Decline</span></div>
+        <div class="foot">Made with Invoice Generator</div>
+      </div>
+    </div>
+    <div class="notes"><ol>
+      <li>Templates (Design gig, Content writing, Tutoring, Dev project, Custom) pre-fill scope, deliverables and terms; the freelancer edits fields, not raw text.</li>
+      <li>After acceptance the same page shows "Accepted by Rahul Mehta on 22 Sep 2026, 14:03", the PDF, and the invoice link once one exists.</li>
+      <li>In the app, an accepted contract gets a "Create invoice from this contract" button that pre-fills client, amount and description.</li>
+    </ol></div>
+  </div>
+</section>
+
+<!-- 8 LANDING -->
+<section class="screen" id="landing">
+  <h2>8 · Landing <code>/</code></h2>
+  <p class="meta">Gets a first-time visitor into the editor in one click. No sign-up wall.</p>
+  <div class="frame">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">yourapp.com</span></div>
+    <div class="pad stack" style="gap:18px">
+      <div class="row between"><div class="h">Invoice Gen</div><div class="row"><span class="sub">How it works</span><span class="sub">Features</span><span class="sub">FAQ</span><span class="btn sm">Log in</span></div></div>
+      <div class="two" style="align-items:center">
+        <div class="stack">
+          <div class="big" style="font-size:30px">Get paid faster.<br>Invoice + contract + reminders, free.</div>
+          <div class="sub" style="font-size:13px">Make a clean invoice or micro-contract in a minute, share a link, get paid by UPI, card or PayPal, and let polite reminders do the awkward follow-ups.</div>
+          <div class="row"><span class="btn primary">Create an invoice</span><span class="btn">See a sample invoice</span></div>
+          <div class="sub">No sign-up needed for your first invoice · Works in any browser, phone or laptop · ₹0</div>
+        </div>
+        <div class="img" style="height:200px">screenshot of the public invoice on a phone</div>
+      </div>
+      <div class="grid3">
+        <div class="solid"><div class="h">1 · Fill</div><div class="sub">Client, items, due date. Saved on your device.</div></div>
+        <div class="solid"><div class="h">2 · Share</div><div class="sub">One link or PDF, straight into WhatsApp or email.</div></div>
+        <div class="solid"><div class="h">3 · Get paid</div><div class="sub">UPI / card / PayPal buttons. Reminders before and after the due date.</div></div>
+      </div>
+      <div class="grid3">
+        <div class="box">PDF in one click</div><div class="box">Pay by UPI, card, PayPal</div><div class="box">Polite automated reminders</div>
+        <div class="box">Micro-contracts clients accept in a tap</div><div class="box">Works offline · installable</div><div class="box">Free. No cut of your money.</div>
+      </div>
+      <div class="box">FAQ · Is it free? · Do you take a cut? · Where is my data stored? · Can I use my own UPI ID? · Is the contract binding?</div>
+      <div class="foot">Footer · Privacy · Terms · Contact</div>
+    </div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
