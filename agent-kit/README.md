@@ -8,6 +8,8 @@ The idea: code is not cheap. A codebase that is hard to change wastes what AI ca
 
 | Command | What it does |
 | --- | --- |
+| `reuse-first` | Before writing code, finds premade parts: UI component libraries (shadcn/ui, Magic UI, daisyUI, ...), starter templates and open-source repos (e-commerce, portfolio, SaaS), and packages. Reads their latest docs, then builds on them instead of from scratch. |
+| `plan-sessions` | For anything you ask it to build, says how big the job is and splits it into separate sessions: what goes first, what can run in parallel, and a ready-to-paste prompt for each. |
 | `/grill-me <idea>` | Interviews you round by round until you and the agent share one design. No code before that. |
 | `/write-a-prd` | Turns the agreed design into a PRD in `docs/prd/`, including module changes and interfaces. |
 | `/prd-to-issues` | Splits a PRD into small vertical-slice GitHub issues with "blocked by" links. |
@@ -18,7 +20,7 @@ The idea: code is not cheap. A codebase that is hard to change wastes what AI ca
 | `browser-check` | Opens a page in headless Chromium (Playwright), runs clicks and fills, reports console errors and failed requests, and takes a screenshot. |
 | `/gstack` and friends | gstack's suite: `/browse`, `/qa`, `/review`, `/ship`, `/investigate`, `/office-hours`, `/plan-eng-review`, `/retro`, and more. |
 
-The installer also adds a short workflow guide to `~/.claude/CLAUDE.md`, so every new session knows the flow: grill, PRD, issues, TDD, browser check.
+The installer also adds a short workflow guide to `~/.claude/CLAUDE.md`, so every new session knows the rules: reuse premade parts first, size the job and split it into sessions, then grill, PRD, issues, TDD, browser check.
 
 Skills without a slash in the table are picked up by the agent on its own when they fit. You can still type them (`/tdd`, `/browser-check`, ...).
 
@@ -50,6 +52,16 @@ Cloud sessions start in a fresh container each time, so the install has to run a
 If you use several environments, add the line to each one. The environment's network access must allow `github.com` and `raw.githubusercontent.com`. If setup fails with a blocked host, add those hosts to the environment's allowed domains or choose a broader access level.
 
 This repo also has a SessionStart hook (`.claude/hooks/session-start.sh`) that runs the installer in cloud sessions, so sessions for this repo get the kit even without the setup script.
+
+## Optional: up-to-date library docs with Context7
+
+`reuse-first` already reads official docs, `llms.txt` files, and GitHub READMEs. On your own computer you can also add the [Context7](https://github.com/upstash/context7) MCP server, which serves version-specific docs for thousands of libraries:
+
+```bash
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+```
+
+`--scope user` makes it available in every project. The installer doesn't do this for you because it changes your MCP configuration.
 
 ## Options
 

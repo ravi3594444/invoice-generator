@@ -19,11 +19,12 @@ Source: $ARGUMENTS (if empty, use the most recent PRD in `docs/prd/` or the curr
 
 3. **Draft the slices.**
    - Each slice is a narrow but complete path through every layer, never "all the database work" as one issue.
-   - Each slice fits in one fresh agent context window and ends in something verifiable: a passing test, a working screen, a working endpoint.
+   - Each slice fits in one fresh agent session and ends in something verifiable: a passing test, a working screen, a working endpoint. Size and order them with the rules in the `plan-sessions` skill, and mark which issues can run in parallel sessions.
+   - Each slice names the premade parts it should use (from the PRD's reused building blocks), so the agent doesn't write them from scratch.
    - Each slice lists the issues that **block** it. A slice with no blockers can start now.
    - A wide mechanical refactor (a rename or retype across the codebase) is the exception. Sequence it as expand, then migrate in batches, then contract, so every step stays green.
 
-4. **Quiz me.** Show a numbered list with, for each issue: title, blocked by, and what it delivers. Ask whether the granularity is right, whether the blocking edges are right, and whether anything should be merged or split. Iterate until I approve.
+4. **Quiz me.** Show a numbered list with, for each issue: title, blocked by, can run alongside, and what it delivers. Ask whether the granularity is right, whether the blocking edges are right, and whether anything should be merged or split. Iterate until I approve.
 
 5. **Publish** in dependency order (blockers first) so later issues can reference real numbers:
    - **GitHub via `gh`** when `gh auth status` succeeds: `gh issue create --title ... --body-file ... --label ready-for-agent`. Create the label first if it is missing.
@@ -41,6 +42,9 @@ Source: $ARGUMENTS (if empty, use the most recent PRD in `docs/prd/` or the curr
 
 ## What to build
 The end-to-end behaviour this slice makes work, from the user's point of view.
+
+## Reuse
+Libraries, components, or template parts to build on.
 
 ## Acceptance criteria
 - [ ] <observable behaviour, checked through a public interface>

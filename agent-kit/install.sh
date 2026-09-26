@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # agent-kit installer.
 #
-# Installs the engineering-workflow skills (/grill-me, /write-a-prd,
-# /prd-to-issues, /tdd, ...) into ~/.claude/skills, adds the workflow guide to
+# Installs the engineering-workflow skills (reuse-first, plan-sessions,
+# /grill-me, /write-a-prd, /prd-to-issues, /tdd, ...) into ~/.claude/skills, adds the workflow guide to
 # ~/.claude/CLAUDE.md, and installs gstack (/gstack, /browse, /qa, /review,
 # /ship, ...). Anything in ~/.claude applies to every Claude Code session on
 # the machine, in every repo.

@@ -15,13 +15,15 @@ Feature: $ARGUMENTS
 
 1. **Explore the codebase** if you have not already. Read `CONTEXT.md` and use its terms everywhere in the PRD. Respect any ADRs in `docs/adr/`.
 
-2. **Map the modules.** Work out which modules the feature creates or changes and how their interfaces change. Prefer deep modules: a small interface in front of a lot of behaviour (see the `deep-modules` skill). Pick the test seams: the highest-level interfaces we can test the feature through. Fewer seams is better.
+2. **Check for premade parts.** If we haven't yet, run the `reuse-first` process so the PRD builds on existing templates, libraries, and components wherever they fit.
 
-3. **Check the module map and seams with me** before writing the whole document. This is the part I care about most.
+3. **Map the modules.** Work out which modules the feature creates or changes and how their interfaces change. Prefer deep modules: a small interface in front of a lot of behaviour (see the `deep-modules` skill). Pick the test seams: the highest-level interfaces we can test the feature through. Fewer seams is better.
 
-4. **Write the PRD** to `docs/prd/<feature-slug>.md` using the template below. Create the folder if needed.
+4. **Check the module map and seams with me** before writing the whole document. This is the part I care about most.
 
-5. **Offer to publish it** as a GitHub issue, labelled `prd` (use `gh` if it is installed and logged in, otherwise the GitHub MCP tools). Then suggest `/prd-to-issues docs/prd/<feature-slug>.md`.
+5. **Write the PRD** to `docs/prd/<feature-slug>.md` using the template below. Create the folder if needed.
+
+6. **Offer to publish it** as a GitHub issue, labelled `prd` (use `gh` if it is installed and logged in, otherwise the GitHub MCP tools). Then suggest `/prd-to-issues docs/prd/<feature-slug>.md`.
 
 ## Template
 
@@ -39,6 +41,11 @@ The solution from the user's point of view.
 ## User stories
 A long, numbered list covering every behaviour, in the form:
 1. As a <actor>, I want <capability>, so that <benefit>.
+
+## Reused building blocks
+Templates, libraries, and components we build on instead of writing from scratch (see the `reuse-first` skill):
+| Building block | Using | License | Notes |
+| --- | --- | --- | --- |
 
 ## Module changes
 For each module that is created or changed:
