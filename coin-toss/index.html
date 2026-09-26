@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Heads or Tails</title>
-<meta name="description" content="Toss a fully animated 3D coin. The camera rides up with it, then it lands heads or tails.">
+<meta name="description" content="Toss a fully animated 3D cricket toss coin. The camera rides up with it, then it lands heads or tails.">
 <meta name="theme-color" content="#0B1417">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
   :root {
     color-scheme: dark;
@@ -16,6 +16,7 @@
     --ink-soft: rgba(11, 20, 23, 0.62);
     --gold: #D2A54C;
     --gold-hi: #F3D48A;
+    --silver: #D9DEE1;
     --amber: #F4B860;
     --parchment: #F1E7D0;
     --sage: #93A29C;
@@ -30,7 +31,7 @@
     margin: 0;
     background: var(--ink);
     color: var(--parchment);
-    font: 15px/1.45 Karla, "Segoe UI", system-ui, sans-serif;
+    font: 15px/1.45 Manrope, "Segoe UI", system-ui, sans-serif;
     overflow: hidden;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
@@ -51,6 +52,19 @@
       radial-gradient(120% 90% at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(4, 8, 10, 0.55));
   }
 
+  /* While the coin spins on its edge, everything but the coin falls back. */
+  #stage .focus {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(60% 50% at 50% 50%, rgba(3, 6, 8, 0) 45%, rgba(3, 6, 8, 0.75));
+    transition: opacity 0.8s ease;
+  }
+  body.tense #stage .focus { opacity: 1; }
+  .top, .call, .hint { transition: opacity 0.6s ease; }
+  body.tense .top, body.tense .call, body.tense .hint { opacity: 0.3; }
+
   /* ---------- HUD ---------- */
   .hud {
     position: fixed;
@@ -66,13 +80,15 @@
   .brand { display: flex; gap: 10px; align-items: center; min-width: 0; }
   .brand .mark {
     width: 26px; height: 26px; border-radius: 50%; flex: none;
-    background: radial-gradient(circle at 35% 30%, #F7DC96, #C8963E 60%, #7A5620);
-    box-shadow: inset 0 0 0 2px rgba(255, 240, 200, 0.35), 0 0 18px rgba(244, 184, 96, 0.35);
+    background:
+      radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
+      radial-gradient(circle, #E3B85E 0 40%, #5E4E30 41% 45%, #DDE2E4 46% 76%, #979EA3 77% 100%);
+    box-shadow: 0 0 18px rgba(244, 184, 96, 0.3);
   }
   .brand h1 {
     margin: 0;
-    font: 700 15px/1.1 Cinzel, "Times New Roman", serif;
-    letter-spacing: 0.16em;
+    font: 800 15px/1.1 Manrope, "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     text-wrap: balance;
   }
@@ -82,7 +98,7 @@
   .tally { display: flex; align-items: center; gap: 14px; }
   .count { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
   .count .k { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); margin-bottom: 4px; }
-  .count .v { font: 500 20px/1 "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .count .v { font: 700 20px/1 Manrope, "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
   .icon-btn {
     width: 36px; height: 36px; border-radius: 50%; padding: 0;
     display: grid; place-items: center;
@@ -97,10 +113,10 @@
   .history li {
     flex: none; width: 18px; height: 18px; border-radius: 50%;
     display: grid; place-items: center;
-    font: 700 9px/1 Cinzel, "Times New Roman", serif;
+    font: 800 9px/1 Manrope, "Segoe UI", system-ui, sans-serif;
   }
   .history li.h { background: linear-gradient(160deg, #F3D48A, #B8872F); color: #3A2708; }
-  .history li.t { border: 1.5px solid var(--gold); color: var(--gold-hi); }
+  .history li.t { border: 1.5px solid var(--silver); color: var(--silver); }
   .history li:first-child { box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--amber); }
   .reset {
     background: none; border: 0; padding: 2px 0; cursor: pointer;
@@ -117,15 +133,16 @@
   .result.show { opacity: 1; transform: none; }
   .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: var(--amber); }
   .word {
-    font: 700 clamp(46px, 13vw, 92px)/1 Cinzel, "Times New Roman", serif;
-    letter-spacing: 0.14em;
-    margin-right: -0.14em;
+    font: 800 clamp(46px, 13vw, 92px)/1 Manrope, "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.08em;
+    margin-right: -0.08em;
+    text-transform: uppercase;
     color: var(--parchment);
     text-shadow: 0 2px 30px rgba(244, 184, 96, 0.35);
   }
   .result.show .word { animation: strike 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
-  @keyframes strike { from { letter-spacing: 0.4em; opacity: 0; } to { letter-spacing: 0.14em; opacity: 1; } }
-  .meta { font: 400 12px/1.4 "IBM Plex Mono", ui-monospace, monospace; color: var(--sage); font-variant-numeric: tabular-nums; }
+  @keyframes strike { from { letter-spacing: 0.32em; opacity: 0; } to { letter-spacing: 0.08em; opacity: 1; } }
+  .meta { font: 500 12px/1.4 Manrope, "Segoe UI", system-ui, sans-serif; color: var(--sage); font-variant-numeric: tabular-nums; }
   .verdict { font-weight: 700; font-size: 14px; }
   .verdict:empty { display: none; }
   .verdict.win { color: var(--win); }
@@ -136,14 +153,14 @@
   .call .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); margin-right: 4px; }
   .chip {
     border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
-    font: 700 13px/1 Karla, system-ui, sans-serif;
+    font: 700 13px/1 Manrope, "Segoe UI", system-ui, sans-serif;
     padding: 10px 14px; border-radius: 999px; cursor: pointer;
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   }
   .chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #2A1C08; }
   .toss {
     border: 0; border-radius: 999px; padding: 15px 34px; cursor: pointer;
-    font: 700 15px/1 Cinzel, "Times New Roman", serif; letter-spacing: 0.22em; text-transform: uppercase;
+    font: 800 15px/1 Manrope, "Segoe UI", system-ui, sans-serif; letter-spacing: 0.16em; text-transform: uppercase;
     color: #2A1A06;
     background: linear-gradient(180deg, #F7D98F, #C8923B);
     box-shadow: 0 10px 30px rgba(244, 184, 96, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(90, 55, 10, 0.35);
@@ -171,7 +188,7 @@
 </head>
 <body>
 <main id="app">
-  <div id="stage"><canvas id="scene" aria-hidden="true"></canvas></div>
+  <div id="stage"><canvas id="scene" aria-hidden="true"></canvas><div class="focus" aria-hidden="true"></div></div>
 
   <div class="hud">
     <header class="top">
@@ -368,135 +385,280 @@
       ctx.restore();
     }
 
-    function starPath(ctx, x, y, outer, inner, points) {
+    function roundRectPath(ctx, x, y, w, h, r) {
       ctx.beginPath();
-      for (var i = 0; i < points * 2; i++) {
-        var rad = i % 2 === 0 ? outer : inner;
-        var a = -Math.PI / 2 + (i * Math.PI) / points;
-        var px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad;
-        if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
-      }
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
     }
 
-    function drawSun(ctx, c, k, C, color) {
+    // Engraved outline around the current path, so overlapping relief reads as separate pieces.
+    function groove(ctx, C, width) {
       ctx.save();
-      ctx.translate(c, c);
-      ctx.fillStyle = C.raised;
-      var n = 24;
-      for (var i = 0; i < n; i++) {
-        var a = (i / n) * Math.PI * 2 - Math.PI / 2;
-        var long = i % 2 === 0;
-        var r0 = 150 * k, r1 = (long ? 292 : 236) * k, w = long ? 0.085 : 0.068;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a - w) * r0, Math.sin(a - w) * r0);
-        ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
-        ctx.lineTo(Math.cos(a + w) * r0, Math.sin(a + w) * r0);
-        ctx.closePath();
-        ctx.fill();
-      }
-      circlePath(ctx, 0, 0, 148 * k);
-      ctx.fill();
       ctx.shadowColor = 'transparent';
-      ctx.fillStyle = C.plate;
-      circlePath(ctx, 0, 0, 124 * k);
-      ctx.fill();
-      // A serene face: this is the "head" side.
       ctx.strokeStyle = C.engrave;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 9 * k;
-      ctx.beginPath(); ctx.arc(-44 * k, -26 * k, 22 * k, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke();
-      ctx.beginPath(); ctx.arc(44 * k, -26 * k, 22 * k, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(2 * k, -14 * k); ctx.lineTo(-10 * k, 26 * k); ctx.lineTo(8 * k, 30 * k); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 30 * k, 40 * k, 0.22 * Math.PI, 0.78 * Math.PI); ctx.stroke();
+      ctx.lineWidth = width;
+      ctx.stroke();
       ctx.restore();
     }
 
-    function drawMoon(ctx, c, k, C) {
-      var off = makeCanvas(ctx.canvas.width, ctx.canvas.height);
-      var o = off.getContext('2d');
-      o.fillStyle = C.raised;
-      circlePath(o, c - 26 * k, c + 6 * k, 196 * k);
-      o.fill();
-      o.globalCompositeOperation = 'destination-out';
-      circlePath(o, c + 58 * k, c - 40 * k, 170 * k);
-      o.fill();
-      o.globalCompositeOperation = 'source-over';
-      starPath(o, c + 84 * k, c - 70 * k, 44 * k, 18 * k, 5); o.fill();
-      starPath(o, c + 150 * k, c + 34 * k, 30 * k, 12 * k, 5); o.fill();
-      starPath(o, c + 44 * k, c + 76 * k, 22 * k, 9 * k, 5); o.fill();
-      // Craters on the crescent.
-      o.fillStyle = C.plate;
-      circlePath(o, c - 150 * k, c + 30 * k, 20 * k); o.fill();
-      circlePath(o, c - 90 * k, c + 140 * k, 14 * k); o.fill();
-      circlePath(o, c - 160 * k, c - 60 * k, 12 * k); o.fill();
-      ctx.drawImage(off, 0, 0);
+    // A cricket ball with its double seam.
+    function drawBall(ctx, x, y, r, C) {
+      ctx.save();
+      ctx.fillStyle = C.raised;
+      circlePath(ctx, x, y, r);
+      ctx.fill();
+      ctx.clip();
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = C.engrave;
+      ctx.lineWidth = Math.max(1.5, r * 0.08);
+      [-0.14, 0.14].forEach(function (o) {
+        ctx.beginPath();
+        ctx.arc(x - r * 1.55, y, r * (1.75 + o), -0.7, 0.7);
+        ctx.stroke();
+      });
+      ctx.restore();
     }
 
+    // Heads: two crossed bats, blades down, with a ball in the V of the handles.
+    function drawBats(ctx, c, k, C) {
+      ctx.save();
+      ctx.translate(c, c + 18 * k);
+      [-1, 1].forEach(function (dir) {
+        var w = 38 * k;
+        ctx.save();
+        ctx.rotate(dir * 0.52);
+        ctx.beginPath();
+        ctx.moveTo(-w, -34 * k);
+        ctx.lineTo(-w, 204 * k);
+        ctx.quadraticCurveTo(-w, 236 * k, -w + 20 * k, 238 * k);
+        ctx.lineTo(w - 20 * k, 238 * k);
+        ctx.quadraticCurveTo(w, 236 * k, w, 204 * k);
+        ctx.lineTo(w, -34 * k);
+        ctx.quadraticCurveTo(w, -56 * k, 14 * k, -64 * k);
+        ctx.lineTo(-14 * k, -64 * k);
+        ctx.quadraticCurveTo(-w, -56 * k, -w, -34 * k);
+        ctx.closePath();
+        ctx.fillStyle = C.blade;
+        ctx.fill();
+        groove(ctx, C, 6 * k);
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = C.raised;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 12 * k;
+        ctx.beginPath();
+        ctx.moveTo(0, -22 * k);
+        ctx.lineTo(0, 212 * k);
+        ctx.stroke();
+        ctx.restore();
+        roundRectPath(ctx, -13 * k, -176 * k, 26 * k, 118 * k, 12 * k);
+        ctx.fillStyle = C.raised;
+        ctx.fill();
+        groove(ctx, C, 5 * k);
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = C.engrave;
+        ctx.lineWidth = 4 * k;
+        for (var i = 0; i < 6; i++) {
+          var y = (-162 + i * 17) * k;
+          ctx.beginPath();
+          ctx.moveTo(-13 * k, y);
+          ctx.lineTo(13 * k, y + 6 * k);
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.restore();
+      });
+      drawBall(ctx, 0, -128 * k, 40 * k, C);
+      ctx.restore();
+    }
+
+    function drawLaurel(ctx, k, C, side) {
+      var R0 = 256 * k;
+      var a1 = Math.PI / 2 - side * 0.2;
+      var a2 = Math.PI / 2 - side * 1.95;
+      var fwd = a2 > a1 ? 1 : -1;
+      ctx.strokeStyle = C.raised;
+      ctx.lineWidth = 6 * k;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 0, R0, a1, a2, fwd < 0);
+      ctx.stroke();
+      ctx.fillStyle = C.raised;
+      for (var i = 0; i < 9; i++) {
+        var t = (i + 0.6) / 9.2;
+        var a = a1 + (a2 - a1) * t;
+        var scale = 1 - 0.4 * t;
+        var heading = Math.atan2(Math.cos(a) * fwd, -Math.sin(a) * fwd);
+        [1, -1].forEach(function (s) {
+          var rr = R0 + s * 15 * k * scale;
+          ctx.save();
+          ctx.translate(Math.cos(a) * rr, Math.sin(a) * rr);
+          ctx.rotate(heading + s * side * 0.55);
+          ctx.beginPath();
+          ctx.ellipse(10 * k * scale, 0, 22 * k * scale, 9 * k * scale, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+    }
+
+    // Tails: three stumps with the bails on top, framed by a laurel.
+    function drawStumps(ctx, c, k, C) {
+      ctx.save();
+      ctx.translate(c, c - 6 * k);
+      var top = -112, bottom = 168, w = 30;
+      [-68, 0, 68].forEach(function (x) {
+        roundRectPath(ctx, (x - w / 2) * k, top * k, w * k, (bottom - top) * k, 14 * k);
+        ctx.fillStyle = C.raised;
+        ctx.fill();
+        groove(ctx, C, 5 * k);
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = C.plate;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 5 * k;
+        ctx.beginPath();
+        ctx.moveTo((x - 6) * k, (top + 20) * k);
+        ctx.lineTo((x - 6) * k, (bottom - 22) * k);
+        ctx.stroke();
+        ctx.restore();
+      });
+      [-34, 34].forEach(function (x) {
+        roundRectPath(ctx, (x - 38) * k, (top - 19) * k, 76 * k, 15 * k, 7 * k);
+        ctx.fillStyle = C.raised;
+        ctx.fill();
+        groove(ctx, C, 4 * k);
+      });
+      roundRectPath(ctx, -100 * k, (bottom - 8) * k, 200 * k, 12 * k, 6 * k);
+      ctx.fillStyle = C.raised;
+      ctx.fill();
+      groove(ctx, C, 3 * k);
+      ctx.restore();
+      ctx.save();
+      ctx.translate(c, c);
+      drawLaurel(ctx, k, C, -1);
+      drawLaurel(ctx, k, C, 1);
+      ctx.restore();
+    }
+
+    // A bimetallic toss coin: silver ring, gold centre.
     function drawFace(ctx, side, mode) {
       var S = ctx.canvas.width, c = S / 2, k = S / 1024;
       var color = mode === 'color';
-      var C = color
-        ? { field: '#a97d31', raised: '#ebc771', plate: '#d9b25d', engrave: '#8d6624', rim: '#dcb65f' }
-        : { field: '#6a6a6a', raised: '#ffffff', plate: '#dedede', engrave: '#8a8a8a', rim: '#f4f4f4' };
+      var G = color
+        ? { raised: '#efcb77', blade: '#dfb862', plate: '#c99f4e', engrave: '#79551b' }
+        : { raised: '#ffffff', blade: '#e6e6e6', plate: '#c4c4c4', engrave: '#7a7a7a' };
+      var Sv = color
+        ? { raised: '#eef1f2', engrave: '#5a6165' }
+        : { raised: '#ffffff', engrave: '#7a7a7a' };
+      var RIM = 472 * k, JOINT = 322 * k;
       ctx.save();
       ctx.clearRect(0, 0, S, S);
-      ctx.fillStyle = C.rim;
-      ctx.fillRect(0, 0, S, S);
+
+      // Raised silver rim.
       if (color) {
-        var rg = ctx.createRadialGradient(c, c, 440 * k, c, c, 512 * k);
-        rg.addColorStop(0, '#b98d3c');
-        rg.addColorStop(0.5, '#ecce80');
-        rg.addColorStop(1, '#a57a2e');
+        var rg = ctx.createRadialGradient(c, c, 430 * k, c, c, 512 * k);
+        rg.addColorStop(0, '#8f969a');
+        rg.addColorStop(0.55, '#f1f3f4');
+        rg.addColorStop(1, '#868d91');
         ctx.fillStyle = rg;
-        ctx.fillRect(0, 0, S, S);
-      }
-      // Recessed field.
-      if (color) {
-        var fg = ctx.createRadialGradient(c - 120 * k, c - 160 * k, 30 * k, c, c, 470 * k);
-        fg.addColorStop(0, '#c89a47');
-        fg.addColorStop(1, '#9a702a');
-        ctx.fillStyle = fg;
       } else {
-        ctx.fillStyle = C.field;
+        ctx.fillStyle = '#f4f4f4';
       }
-      circlePath(ctx, c, c, 466 * k);
+      ctx.fillRect(0, 0, S, S);
+
+      // Recessed silver ring.
+      if (color) {
+        var sg = ctx.createRadialGradient(c - 140 * k, c - 180 * k, 40 * k, c, c, RIM);
+        sg.addColorStop(0, '#bcc2c5');
+        sg.addColorStop(1, '#7f868a');
+        ctx.fillStyle = sg;
+      } else {
+        ctx.fillStyle = '#686868';
+      }
+      circlePath(ctx, c, c, RIM);
       ctx.fill();
-      // Worn, matte micro texture.
-      for (var i = 0; i < 6000; i++) {
-        var a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 462 * k;
+
+      // Gold centre.
+      if (color) {
+        var gg = ctx.createRadialGradient(c - 100 * k, c - 130 * k, 20 * k, c, c, JOINT);
+        gg.addColorStop(0, '#cf9f4a');
+        gg.addColorStop(1, '#976d28');
+        ctx.fillStyle = gg;
+      } else {
+        ctx.fillStyle = '#6e6e6e';
+      }
+      circlePath(ctx, c, c, JOINT);
+      ctx.fill();
+
+      // Worn, matte micro texture on both metals.
+      for (var i = 0; i < 7000; i++) {
+        var a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * (RIM - 4 * k);
+        var alpha = (rnd() * 0.08).toFixed(3);
         ctx.fillStyle = color
-          ? 'rgba(255,236,190,' + (rnd() * 0.07).toFixed(3) + ')'
-          : 'rgba(' + (rnd() < 0.5 ? '255,255,255' : '0,0,0') + ',' + (rnd() * 0.08).toFixed(3) + ')';
+          ? (r < JOINT ? 'rgba(255,236,190,' : 'rgba(255,255,255,') + alpha + ')'
+          : 'rgba(' + (rnd() < 0.5 ? '255,255,255' : '0,0,0') + ',' + alpha + ')';
         ctx.fillRect(c + Math.cos(a) * r, c + Math.sin(a) * r, 2 * k, 2 * k);
       }
+
+      // Where the two metals meet.
+      ctx.strokeStyle = color ? 'rgba(38,30,16,0.7)' : '#3c3c3c';
+      ctx.lineWidth = 5 * k;
+      circlePath(ctx, c, c, JOINT);
+      ctx.stroke();
+
       if (color) {
-        ctx.shadowColor = 'rgba(60,38,8,0.55)';
+        ctx.shadowColor = 'rgba(28,32,36,0.5)';
         ctx.shadowBlur = 5 * k;
         ctx.shadowOffsetY = 3 * k;
       }
-      ctx.fillStyle = C.raised;
-      ctx.strokeStyle = C.raised;
-      // Beaded border.
-      for (var j = 0; j < 96; j++) {
-        var b = (j / 96) * Math.PI * 2;
-        circlePath(ctx, c + Math.cos(b) * 444 * k, c + Math.sin(b) * 444 * k, 7.5 * k);
-        ctx.fill();
-      }
-      ctx.lineWidth = 7 * k;
-      circlePath(ctx, c, c, 334 * k);
+
+      // A cricket-ball seam stitched around the ring.
+      ctx.strokeStyle = Sv.raised;
+      ctx.lineWidth = 4 * k;
+      circlePath(ctx, c, c, 447 * k);
       ctx.stroke();
-      var serif = 'Cinzel, "Trajan Pro", "Times New Roman", serif';
-      arcText(ctx, side === 'H' ? 'HEADS' : 'TAILS', c, c, 386 * k, true, '700 ' + 70 * k + 'px ' + serif, 16 * k);
-      arcText(ctx, side === 'H' ? 'MMXXVI' : 'FORTUNA', c, c, 388 * k, false, '700 ' + 50 * k + 'px ' + serif, 12 * k);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 5 * k;
+      for (var j = 0; j < 84; j++) {
+        var b = (j / 84) * Math.PI * 2;
+        [[435, 0.75], [459, -0.75]].forEach(function (st) {
+          ctx.save();
+          ctx.translate(c + Math.cos(b) * st[0] * k, c + Math.sin(b) * st[0] * k);
+          ctx.rotate(b + Math.PI / 2 + st[1]);
+          ctx.beginPath();
+          ctx.moveTo(-7 * k, 0);
+          ctx.lineTo(7 * k, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
+      var sans = 'Manrope, "Segoe UI", system-ui, sans-serif';
+      ctx.fillStyle = Sv.raised;
+      arcText(ctx, side === 'H' ? 'HEADS' : 'TAILS', c, c, 380 * k, true, '800 ' + 64 * k + 'px ' + sans, 18 * k);
+      arcText(ctx, side === 'H' ? 'BAT OR BOWL' : 'CAPTAIN’S CALL', c, c, 382 * k, false, '800 ' + 42 * k + 'px ' + sans, 10 * k);
       [0, Math.PI].forEach(function (a2) {
-        var x = c + Math.cos(a2) * 386 * k, y = c + Math.sin(a2) * 386 * k;
-        starPath(ctx, x, y, 16 * k, 6 * k, 4);
-        ctx.fill();
+        drawBall(ctx, c + Math.cos(a2) * 380 * k, c + Math.sin(a2) * 380 * k, 15 * k, Sv);
       });
-      if (side === 'H') drawSun(ctx, c, k, C, color);
-      else drawMoon(ctx, c, k, C);
+
+      // Gold centre: a raised lip, then the emblem.
+      if (color) ctx.shadowColor = 'rgba(60,38,8,0.55)';
+      ctx.strokeStyle = G.raised;
+      ctx.lineWidth = 8 * k;
+      circlePath(ctx, c, c, 311 * k);
+      ctx.stroke();
+      if (side === 'H') drawBats(ctx, c, k, G);
+      else drawStumps(ctx, c, k, G);
       ctx.restore();
     }
 
@@ -525,14 +687,14 @@
     }
     paintFaces();
     if (document.fonts && document.fonts.load) {
-      document.fonts.load('700 70px Cinzel').then(paintFaces).catch(function () {});
+      document.fonts.load('800 64px Manrope').then(paintFaces).catch(function () {});
     }
 
     function makeReeding(mode) {
       var c = makeCanvas(16, 4), g = c.getContext('2d');
       var grd = g.createLinearGradient(0, 0, 16, 0);
-      var lo = mode === 'color' ? '#8e6726' : '#404040';
-      var hi = mode === 'color' ? '#e8c673' : '#ffffff';
+      var lo = mode === 'color' ? '#7a8084' : '#404040';
+      var hi = mode === 'color' ? '#eceff0' : '#ffffff';
       grd.addColorStop(0, lo); grd.addColorStop(0.5, hi); grd.addColorStop(1, lo);
       g.fillStyle = grd;
       g.fillRect(0, 0, 16, 4);
@@ -625,6 +787,8 @@
     var rim = new T3.DirectionalLight(0x9fc4d6, 0.7);
     rim.position.set(-6, 14, -14);
     scene.add(rim);
+    var faceLight = new T3.PointLight(0xfff2dd, 0, 30, 2);
+    scene.add(faceLight);
 
     function makeGlow() {
       var c = makeCanvas(64, 64), g = c.getContext('2d');
@@ -762,9 +926,9 @@
         if (actx.state === 'suspended') actx.resume();
       } catch (e) { actx = null; }
     }
-    function ring(base, parts, gain) {
+    function ring(base, parts, gain, delay) {
       if (!actx) return;
-      var t0 = actx.currentTime;
+      var t0 = actx.currentTime + (delay || 0);
       parts.forEach(function (p) {
         var o = actx.createOscillator(), g = actx.createGain();
         o.type = 'sine';
@@ -805,6 +969,31 @@
     }
     function soundSettle() {
       ring(2900, [[1, 1, 0.45], [2.1, 0.3, 0.25]], 0.03);
+    }
+    function thump(t0, gain) {
+      [[1, 1], [2, 0.4]].forEach(function (p) {
+        var o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(78 * p[0], t0);
+        o.frequency.exponentialRampToValueAtTime(46 * p[0], t0 + 0.16);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(gain * p[1], t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+        o.connect(g);
+        g.connect(master);
+        o.start(t0);
+        o.stop(t0 + 0.28);
+      });
+    }
+    function soundHeartbeat() {
+      if (!actx) return;
+      var t = actx.currentTime;
+      thump(t, 0.42);
+      thump(t + 0.18, 0.28);
+    }
+    function soundReveal() {
+      ring(1046.5, [[1, 1, 1.2], [2, 0.3, 0.7], [3, 0.12, 0.4]], 0.05);
+      ring(1568, [[1, 1, 1.4], [2, 0.25, 0.8]], 0.045, 0.11);
     }
     function setWhoosh(level, freq) {
       if (!actx || !whooshGain) return;
@@ -852,6 +1041,10 @@
       if (phase !== 'idle') return;
       ensureAudio();
       var face = fairFace();
+      var suspense = !reduceMotion;
+      // With suspense on, the flip aims at either face at random. The coin then stands up
+      // on its edge, and the way it finally tips over lands it on the result face.
+      var aimFace = suspense ? (rnd() < 0.5 ? 'H' : 'T') : face;
       var H = reduceMotion ? 5.5 + rnd() * 1.5 : 18 + rnd() * 8;
       var T = reduceMotion ? 1.15 : 1.95 + ((H - 18) / 8) * 0.45;
       var d1 = 0.5 + rnd() * 0.25;
@@ -862,8 +1055,8 @@
       var v0 = (yTouch - y0 + 0.5 * g * T * T) / T;
       var whole = reduceMotion ? 3 + Math.floor(rnd() * 2) : 7 + Math.floor(rnd() * 3);
       var fromBase = rest.theta;            // 0 (heads up) or PI (tails up)
-      var toBase = face === 'H' ? 0 : Math.PI;
-      var extra = fromBase === toBase ? 0 : Math.PI;
+      var aimBase = aimFace === 'H' ? 0 : Math.PI;
+      var extra = fromBase === aimBase ? 0 : Math.PI;
       var thetaFinal = fromBase + whole * Math.PI * 2 + extra;
       var psiF = (rnd() - 0.5) * 0.7;
       var ang = rnd() * Math.PI * 2, rad = rnd() * 1.4;
@@ -880,8 +1073,22 @@
         orbitDir: rnd() < 0.5 ? -1 : 1,
         d1: d1, d2: d2, hop: 0.45 + rnd() * 0.4, Tc: 0.3, Td: 1.6,
         wdir: rnd() < 0.5 ? -1 : 1, K: 7.5, phi0: Math.PI - psiF, tickIdx: 0,
-        qFinal: flipQuat(new T3.Quaternion(), psiF, 0, toBase)
+        qFinal: flipQuat(new T3.Quaternion(), psiF, 0, face === 'H' ? 0 : Math.PI)
       };
+      if (suspense) {
+        var fake = rnd() < 0.4;
+        var thetaE = thetaFinal - Math.PI / 2;   // stands up on the edge it lands on
+        var sigma = face === aimFace ? 1 : -1;   // tips forward onto the aimed face, or back onto the other
+        var w1 = 4 + rnd() * 1.5;
+        var alpha0 = 0.3;
+        toss.susp = {
+          Tup: 0.45, Tspin: 1.3 + rnd() * 0.6, Troll: fake ? 1.6 : 1.05, Tw: 1.35,
+          thetaE: thetaE, sigma: sigma, betaF: thetaE + sigma * Math.PI / 2, fake: fake,
+          w0: 13 + rnd() * 4, w1: w1, rate0: w1 / Math.sqrt(Math.sin(alpha0)),
+          spinDir: rnd() < 0.5 ? -1 : 1, lean: 0.06 + rnd() * 0.05, alpha0: alpha0
+        };
+        toss.post = { phi: 0, beta: 0, psi: 0, rate: 0, tickAcc: 0, beatT: 0.2, beatGap: 0.86 };
+      }
       phase = 'flight';
       phaseT = 0;
       soundFlick();
@@ -903,15 +1110,133 @@
       coin.quaternion.copy(toss.qFinal);
       setWhoosh(0, 600);
       soundSettle();
+      if (toss.susp) {
+        document.body.classList.remove('tense');
+        soundReveal();
+      }
       onResultUI(toss);
+    }
+
+    // Angle between the coin and the table, whichever face is up.
+    function flatTilt(beta) {
+      var m = ((beta % Math.PI) + Math.PI) % Math.PI;
+      return Math.min(m, Math.PI - m);
+    }
+    // Height of the centre with the lowest point of the rim on the table.
+    function bodyY(beta) {
+      return R * Math.abs(Math.sin(beta)) + (TH / 2) * Math.abs(Math.cos(beta));
+    }
+    // Orientation of a coin rolling on its rim: turn about the vertical (phi),
+    // tip over (beta, 0 = heads up, PI = tails up), turn about its own face (psi).
+    function rollQuat(out, phi, beta, psi) {
+      out.setFromAxisAngle(AY, phi);
+      qTmp.setFromAxisAngle(AX, beta);
+      out.multiply(qTmp);
+      qTmp2.setFromAxisAngle(AY, psi);
+      out.multiply(qTmp2);
+      return out;
+    }
+
+    function updateSuspense(dt, P, Q) {
+      var S = toss.susp, st = toss.post, s;
+      P.x = toss.ex;
+      P.z = toss.ez;
+      if (phase === 'stand') {
+        // Bounces off the edge it landed on, pops up onto it and starts to spin.
+        s = phaseT / S.Tup;
+        st.beta = lerp(toss.thetaTouch, S.thetaE, easeOutCubic(s));
+        st.rate = S.spinDir * lerp(1.5, S.w0, smooth01(s));
+        P.y = bodyY(st.beta) + 0.35 * 4 * s * (1 - s);
+      } else if (phase === 'spin') {
+        // Spins on its edge and slows down while both faces flash past.
+        s = phaseT / S.Tspin;
+        st.rate = S.spinDir * (S.w1 + (S.w0 - S.w1) * Math.pow(1 - s, 1.4));
+        var lean = S.fake ? 0 : S.sigma * S.lean * smooth01(s);
+        st.beta = S.thetaE + lean + 0.035 * Math.sin(phaseT * 19) * (1 - s);
+        P.y = bodyY(st.beta);
+      } else if (phase === 'roll') {
+        // Tips over, rolling on its rim. Sometimes it teeters the wrong way first.
+        s = phaseT / S.Troll;
+        var from = S.thetaE + (S.fake ? 0 : S.sigma * S.lean);
+        var to = S.betaF - S.sigma * S.alpha0;
+        if (S.fake) {
+          var wrong = S.thetaE - S.sigma * 0.42;
+          st.beta = s < 0.45
+            ? lerp(from, wrong, smooth01(s / 0.45))
+            : lerp(wrong, to, Math.pow((s - 0.45) / 0.55, 2));
+        } else {
+          st.beta = lerp(from, to, s * s);
+        }
+        st.rate = S.spinDir * S.w1 / Math.sqrt(Math.max(Math.sin(flatTilt(st.beta)), 0.2));
+        P.y = bodyY(st.beta);
+      } else {
+        // The last rattle: flatter and flatter, faster and faster.
+        s = phaseT / S.Tw;
+        var alpha = S.alpha0 * Math.pow(1 - s, 1.6);
+        st.beta = S.betaF - S.sigma * alpha;
+        st.rate = S.spinDir * Math.min(140, S.rate0 * Math.sqrt(S.alpha0 / Math.max(alpha, 0.002)));
+        P.y = bodyY(st.beta);
+      }
+      st.phi += st.rate * dt;
+      st.psi -= st.rate * Math.cos(st.beta) * dt;   // rolls on its rim without slipping
+      if (phase === 'rattle') {
+        // Ease the face round so it reads upright once it lies flat.
+        var up = toss.face === 'H' ? 1 : -1;
+        var err = toss.psiF - (st.phi + up * st.psi);
+        err = Math.atan2(Math.sin(err), Math.cos(err));
+        st.psi += up * Math.max(-2.5 * dt, Math.min(2.5 * dt, err * (1 - Math.exp(-4 * dt))));
+      }
+      rollQuat(Q, st.phi, st.beta, st.psi);
+      suspenseSound(dt);
+    }
+
+    function suspenseSound(dt) {
+      var S = toss.susp, st = toss.post;
+      var rate = Math.abs(st.rate);
+      var step = phase === 'stand' || phase === 'spin' ? Math.PI : Math.PI / 2;
+      st.tickAcc += rate * dt;
+      if (st.tickAcc >= step) {
+        st.tickAcc %= step;
+        var tilt = flatTilt(st.beta);
+        if (phase === 'rattle') soundTick(0.3 + 0.7 * tilt / S.alpha0, 1.4 + 0.6 * (1 - tilt / S.alpha0));
+        else if (phase === 'roll') soundTick(0.75, 1 + 0.4 * (1 - tilt / (Math.PI / 2)));
+        else soundTick(0.4, 0.85);
+      }
+      setWhoosh(phase === 'rattle' ? 0.014 * (1 - phaseT / S.Tw) : 0.014, 2200 + Math.min(rate, 60) * 35);
+      if (phase === 'spin' || phase === 'roll') {
+        st.beatT -= dt;
+        if (st.beatT <= 0) {
+          soundHeartbeat();
+          st.beatT += st.beatGap;
+          st.beatGap = Math.max(0.56, st.beatGap * 0.93);
+        }
+      }
     }
 
     function updateCoin(dt) {
       if (phase === 'idle') return;
       phaseT += dt;
-      if (phase === 'flight' && phaseT >= toss.T) { phaseT -= toss.T; phase = 'hop'; impact(1); setWhoosh(0, 600); }
+      var S = toss.susp;
+      if (phase === 'flight' && phaseT >= toss.T) {
+        phaseT -= toss.T;
+        impact(1);
+        setWhoosh(0, 600);
+        if (S) {
+          phase = 'stand';
+          toss.post.phi = toss.psiF;
+          toss.post.beta = toss.thetaTouch;
+          toss.post.psi = 0;
+          onSuspenseUI();
+        } else {
+          phase = 'hop';
+        }
+      }
       if (phase === 'hop' && phaseT >= toss.Tc) { phaseT -= toss.Tc; phase = 'wobble'; impact(0.4); }
       if (phase === 'wobble' && phaseT >= toss.Td) { settle(); return; }
+      if (phase === 'stand' && phaseT >= S.Tup) { phaseT -= S.Tup; phase = 'spin'; soundClink(0.3); }
+      if (phase === 'spin' && phaseT >= S.Tspin) { phaseT -= S.Tspin; phase = 'roll'; }
+      if (phase === 'roll' && phaseT >= S.Troll) { phaseT -= S.Troll; phase = 'rattle'; }
+      if (phase === 'rattle' && phaseT >= S.Tw) { settle(); return; }
 
       var P = coin.position, Q = coin.quaternion, s;
       if (phase === 'flight') {
@@ -945,13 +1270,17 @@
           toss.tickIdx = idx;
           soundTick(alpha / toss.d2, 1 + s * 0.6);
         }
+      } else {
+        updateSuspense(dt, P, Q);
       }
     }
 
     /* ================= Camera: rides up with the coin ================= */
     var camPos = new T3.Vector3(), camLook = new T3.Vector3(), wantPos = new T3.Vector3(), wantLook = new T3.Vector3();
+    var lowPos = new T3.Vector3(), highPos = new T3.Vector3();
     var camFov = 42;
     var clock = 0;
+    var tension = 0;
 
     function framing() { return Math.max(1, 0.78 / camera.aspect); }
     function baseFov() { return camera.aspect < 1 ? 48 : 40; }
@@ -972,7 +1301,19 @@
         wantPos.set(c.x + Math.sin(orbit) * dist, c.y + yOff, c.z + Math.cos(orbit) * dist);
         wantLook.copy(c);
         rateP = 5.5; rateL = 22; fov += 10;
-      } else if (phase === 'hop' || phase === 'wobble') {
+      } else if (phase === 'stand' || phase === 'spin' || phase === 'roll') {
+        // Down at table level, where nobody can tell which way it will fall.
+        var S = toss.susp;
+        var rise = phase === 'roll' ? smoothRange(0.62, 1, phaseT / S.Troll) : 0;
+        var push = phase === 'spin' ? smooth01(phaseT / S.Tspin) : (phase === 'roll' ? 1 : 0);
+        var az = 0.22 * Math.sin(clock * 0.45);
+        var D = (6.2 - 1.1 * push) * f;
+        lowPos.set(c.x + Math.sin(az) * D, 1.15, c.z + Math.cos(az) * D);
+        highPos.set(c.x, 3.8 * f, c.z + 3.6 * f);
+        wantPos.copy(lowPos).lerp(highPos, rise);
+        wantLook.set(c.x, lerp(0.85, 0.1, rise), c.z + 0.3 * f * rise);
+        rateP = phase === 'stand' ? 3 : 2.4; rateL = 6;
+      } else if (phase === 'hop' || phase === 'wobble' || phase === 'rattle') {
         wantPos.set(c.x, 3.8 * f, c.z + 3.6 * f);
         wantLook.set(c.x, 0.1, c.z + 0.3 * f);
         rateP = 3.2; rateL = 8; fov += 2;
@@ -1030,6 +1371,14 @@
       updateCoin(dt);
       updateCamera(dt);
       updateDust(dt);
+      // While the coin spins on its edge: the room dims, the beam brightens and a soft
+      // light from the camera side lets you catch each face as it turns past.
+      var tenseNow = phase === 'stand' || phase === 'spin' || phase === 'roll';
+      tension += ((tenseNow ? 1 : 0) - tension) * (1 - Math.exp(-2.5 * dt));
+      renderer.toneMappingExposure = 1.05 - 0.14 * tension;
+      beam.material.uniforms.uStrength.value = 0.13 + 0.08 * tension;
+      faceLight.intensity = 0.9 * tension;
+      faceLight.position.set(camera.position.x, camera.position.y + 1.5, camera.position.z);
       renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }
@@ -1075,6 +1424,11 @@
       hintEl.textContent = '';
     }
 
+    function onSuspenseUI() {
+      document.body.classList.add('tense');
+      tossBtn.textContent = 'Wait for it…';
+    }
+
     function turnsLabel(turns) {
       var whole = Math.floor(turns);
       return turns - whole > 0.25 ? whole + '½' : String(whole);
@@ -1092,7 +1446,7 @@
       while (streak < state.history.length && state.history[streak] === face) streak++;
       var total = state.counts.H + state.counts.T;
 
-      $('resEyebrow').textContent = face === 'H' ? 'Obverse · sun side up' : 'Reverse · moon side up';
+      $('resEyebrow').textContent = face === 'H' ? 'Crossed bats side up' : 'Stumps side up';
       $('resWord').textContent = NAMES[face];
       $('resMeta').textContent = 'Toss ' + total + ' · peak ' + Math.round(t.H * UNIT_CM) + ' cm · ' + turnsLabel(t.turns) + ' turns' +
         (streak >= 2 ? ' · ' + streak + ' in a row' : '');
@@ -1100,7 +1454,9 @@
       verdict.className = 'verdict';
       if (state.call) {
         var won = state.call === face;
-        verdict.textContent = won ? 'You called it.' : 'You called ' + NAMES[state.call] + '.';
+        verdict.textContent = won
+          ? 'You won the toss. Bat or bowl?'
+          : 'You called ' + NAMES[state.call] + ' and lost the toss.';
         verdict.classList.add(won ? 'win' : 'lose');
       } else {
         verdict.textContent = '';
