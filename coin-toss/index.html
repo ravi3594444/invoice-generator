@@ -1,0 +1,1163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heads or Tails</title>
+<meta name="description" content="Toss a fully animated 3D coin. The camera rides up with it, then it lands heads or tails.">
+<meta name="theme-color" content="#0B1417">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #0B1417;
+    --ink-soft: rgba(11, 20, 23, 0.62);
+    --gold: #D2A54C;
+    --gold-hi: #F3D48A;
+    --amber: #F4B860;
+    --parchment: #F1E7D0;
+    --sage: #93A29C;
+    --line: rgba(241, 231, 208, 0.16);
+    --win: #A8D59A;
+    --lose: #EE9C86;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--parchment);
+    font: 15px/1.45 Karla, "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ---------- 3D stage ---------- */
+  #stage { position: fixed; inset: 0; background: var(--ink); }
+  #stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; touch-action: manipulation; }
+  #stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to bottom, rgba(11, 20, 23, 0.72), rgba(11, 20, 23, 0) 20%, rgba(11, 20, 23, 0) 60%, rgba(11, 20, 23, 0.8)),
+      radial-gradient(120% 90% at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(4, 8, 10, 0.55));
+  }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-block: calc(env(safe-area-inset-top, 0px) + 18px) calc(env(safe-area-inset-bottom, 0px) + 20px);
+    padding-inline: max(16px, env(safe-area-inset-left, 0px) + 16px) max(16px, env(safe-area-inset-right, 0px) + 16px);
+  }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .brand { display: flex; gap: 10px; align-items: center; min-width: 0; }
+  .brand .mark {
+    width: 26px; height: 26px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 35% 30%, #F7DC96, #C8963E 60%, #7A5620);
+    box-shadow: inset 0 0 0 2px rgba(255, 240, 200, 0.35), 0 0 18px rgba(244, 184, 96, 0.35);
+  }
+  .brand h1 {
+    margin: 0;
+    font: 700 15px/1.1 Cinzel, "Times New Roman", serif;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  .brand p { margin: 3px 0 0; font-size: 12px; color: var(--sage); }
+
+  .score { pointer-events: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .tally { display: flex; align-items: center; gap: 14px; }
+  .count { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+  .count .k { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); margin-bottom: 4px; }
+  .count .v { font: 500 20px/1 "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; padding: 0;
+    display: grid; place-items: center;
+    border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
+    cursor: pointer;
+  }
+  .icon-btn svg { width: 18px; height: 18px; }
+  .icon-btn .off { display: none; }
+  .icon-btn[aria-pressed="false"] .on { display: none; }
+  .icon-btn[aria-pressed="false"] .off { display: block; }
+  .history { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; justify-content: flex-end; max-width: min(58vw, 300px); overflow: hidden; }
+  .history li {
+    flex: none; width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center;
+    font: 700 9px/1 Cinzel, "Times New Roman", serif;
+  }
+  .history li.h { background: linear-gradient(160deg, #F3D48A, #B8872F); color: #3A2708; }
+  .history li.t { border: 1.5px solid var(--gold); color: var(--gold-hi); }
+  .history li:first-child { box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--amber); }
+  .reset {
+    background: none; border: 0; padding: 2px 0; cursor: pointer;
+    color: var(--sage); font: inherit; font-size: 11px; letter-spacing: 0.06em;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  .bottom { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  .result {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    opacity: 0; transform: translateY(10px) scale(0.98);
+    transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .result.show { opacity: 1; transform: none; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: var(--amber); }
+  .word {
+    font: 700 clamp(46px, 13vw, 92px)/1 Cinzel, "Times New Roman", serif;
+    letter-spacing: 0.14em;
+    margin-right: -0.14em;
+    color: var(--parchment);
+    text-shadow: 0 2px 30px rgba(244, 184, 96, 0.35);
+  }
+  .result.show .word { animation: strike 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes strike { from { letter-spacing: 0.4em; opacity: 0; } to { letter-spacing: 0.14em; opacity: 1; } }
+  .meta { font: 400 12px/1.4 "IBM Plex Mono", ui-monospace, monospace; color: var(--sage); font-variant-numeric: tabular-nums; }
+  .verdict { font-weight: 700; font-size: 14px; }
+  .verdict:empty { display: none; }
+  .verdict.win { color: var(--win); }
+  .verdict.lose { color: var(--lose); }
+
+  .controls { pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 10px 14px; flex-wrap: wrap; }
+  .call { display: flex; align-items: center; gap: 6px; }
+  .call .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); margin-right: 4px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
+    font: 700 13px/1 Karla, system-ui, sans-serif;
+    padding: 10px 14px; border-radius: 999px; cursor: pointer;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #2A1C08; }
+  .toss {
+    border: 0; border-radius: 999px; padding: 15px 34px; cursor: pointer;
+    font: 700 15px/1 Cinzel, "Times New Roman", serif; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #2A1A06;
+    background: linear-gradient(180deg, #F7D98F, #C8923B);
+    box-shadow: 0 10px 30px rgba(244, 184, 96, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(90, 55, 10, 0.35);
+  }
+  .toss:active { transform: translateY(1px); }
+  .toss:disabled { cursor: default; opacity: 0.5; }
+  .hint { margin: 0; font-size: 12px; color: var(--sage); min-height: 1.45em; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+  .fallback {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    padding-inline: 24px; text-align: center; background: var(--ink); color: var(--parchment);
+  }
+  .fallback p { max-width: 36ch; }
+
+  @media (max-width: 520px) {
+    .brand p { display: none; }
+    .brand h1 { font-size: 13px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .result { transition: opacity 0.2s linear; transform: none; }
+    .result.show .word { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main id="app">
+  <div id="stage"><canvas id="scene" aria-hidden="true"></canvas></div>
+
+  <div class="hud">
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <h1>Heads or Tails</h1>
+          <p>Fair 50/50 from your browser's secure random generator</p>
+        </div>
+      </div>
+      <div class="score">
+        <div class="tally">
+          <div class="count"><span class="k">Heads</span><span class="v" id="nH">0</span></div>
+          <div class="count"><span class="k">Tails</span><span class="v" id="nT">0</span></div>
+          <button id="sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound">
+            <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+            <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6"/><path d="M22 9l-5 6"/></svg>
+          </button>
+        </div>
+        <ol class="history" id="history" aria-label="Recent tosses, newest first"></ol>
+        <button class="reset" id="reset" type="button" hidden>Reset tally</button>
+      </div>
+    </header>
+
+    <footer class="bottom">
+      <div class="result" id="result" aria-live="polite">
+        <div class="eyebrow" id="resEyebrow"></div>
+        <div class="word" id="resWord"></div>
+        <div class="meta" id="resMeta"></div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+      <div class="controls">
+        <div class="call" role="group" aria-label="Call it before you toss">
+          <span class="label">Call it</span>
+          <button class="chip" type="button" data-call="H" aria-pressed="false">Heads</button>
+          <button class="chip" type="button" data-call="T" aria-pressed="false">Tails</button>
+        </div>
+        <button class="toss" id="tossBtn" type="button">Toss</button>
+      </div>
+      <p class="hint" id="hint">Tap the table or press Space to toss</p>
+    </footer>
+  </div>
+
+  <div class="fallback" id="fallback" hidden><p id="fallbackMsg"></p></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.ready === 'function') hot.ready(start);
+  else start((hot && hot.data) || {});
+
+  function showFallback(msg) {
+    $('fallbackMsg').textContent = msg;
+    $('fallback').hidden = false;
+  }
+
+  function start(hotData) {
+    var T3 = window.THREE;
+    if (!T3) {
+      showFallback('The 3D engine did not load. Check your connection and reload the page.');
+      return;
+    }
+
+    /* ================= Per-viewer state ================= */
+    var KEY = 'heads-or-tails:v1';
+    function loadSaved() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    }
+    var saved = Object.assign({}, loadSaved(), hotData || {});
+    var state = {
+      counts: { H: (saved.counts && saved.counts.H) | 0, T: (saved.counts && saved.counts.T) | 0 },
+      history: Array.isArray(saved.history) ? saved.history.filter(function (f) { return f === 'H' || f === 'T'; }).slice(0, 40) : [],
+      call: saved.call === 'H' || saved.call === 'T' ? saved.call : null,
+      muted: !!saved.muted,
+      face: saved.face === 'T' ? 'T' : 'H'
+    };
+    function persist() {
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+    }
+    try {
+      if (hot && typeof hot.snapshot === 'function') hot.snapshot(function () { return state; });
+    } catch (e) { /* hot reload unsupported */ }
+
+    var reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    /* ================= Randomness ================= */
+    function fairFace() {
+      if (window.crypto && crypto.getRandomValues) {
+        var b = new Uint8Array(1);
+        crypto.getRandomValues(b);
+        return (b[0] & 1) ? 'H' : 'T';
+      }
+      return Math.random() < 0.5 ? 'H' : 'T';
+    }
+    var rnd = Math.random;
+
+    /* ================= Renderer ================= */
+    var canvas = $('scene');
+    var renderer;
+    try {
+      renderer = new T3.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+    } catch (e) {
+      showFallback('This browser could not start WebGL, which the 3D coin needs. Try another browser or device.');
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = T3.sRGBEncoding;
+    renderer.toneMapping = T3.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T3.PCFSoftShadowMap;
+    var maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+    var INK = 0x0B1417;
+    var scene = new T3.Scene();
+    scene.background = new T3.Color(INK);
+    scene.fog = new T3.FogExp2(INK, 0.011);
+
+    var camera = new T3.PerspectiveCamera(42, 1, 0.05, 500);
+
+    function makeCanvas(w, h) {
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      return c;
+    }
+    function circlePath(ctx, x, y, r) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+
+    /* ================= Reflection environment ================= */
+    (function buildEnvironment() {
+      var env = new T3.Scene();
+      var c = makeCanvas(8, 256), g = c.getContext('2d');
+      var grd = g.createLinearGradient(0, 0, 0, 256);
+      grd.addColorStop(0, '#fff4e0');
+      grd.addColorStop(0.22, '#d2a263');
+      grd.addColorStop(0.42, '#5b503e');
+      grd.addColorStop(0.58, '#1d2a2b');
+      grd.addColorStop(1, '#2c1d12');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 8, 256);
+      var tex = new T3.CanvasTexture(c);
+      tex.encoding = T3.sRGBEncoding;
+      env.add(new T3.Mesh(new T3.SphereGeometry(10, 32, 16), new T3.MeshBasicMaterial({ map: tex, side: T3.BackSide })));
+      var lampDisk = new T3.Mesh(new T3.CircleGeometry(2.6, 32), new T3.MeshBasicMaterial({ color: new T3.Color(7, 5.6, 3.8) }));
+      lampDisk.position.set(0, 9, 0);
+      lampDisk.rotation.x = Math.PI / 2;
+      env.add(lampDisk);
+      // Soft panels around the horizon give the coin edge its glints.
+      var panelMat = new T3.MeshBasicMaterial({ color: new T3.Color(1.5, 1.35, 1.1), side: T3.DoubleSide });
+      for (var i = 0; i < 5; i++) {
+        var a = (i / 5) * Math.PI * 2 + 0.4;
+        var p = new T3.Mesh(new T3.PlaneGeometry(3.2, 4.5), panelMat);
+        p.position.set(Math.cos(a) * 8.5, 3.2, Math.sin(a) * 8.5);
+        p.lookAt(0, 0, 0);
+        env.add(p);
+      }
+      var pmrem = new T3.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(env, 0.035).texture;
+      pmrem.dispose();
+    })();
+
+    /* ================= Coin ================= */
+    var R = 1;            // coin radius (1 unit = 12 mm)
+    var TH = 0.13;        // thickness
+    var REST_Y = TH / 2;
+    var UNIT_CM = 1.2;
+
+    function arcText(ctx, text, cx, cy, radius, top, font, spacing) {
+      ctx.save();
+      ctx.font = font;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var chars = Array.from(text);
+      var widths = chars.map(function (ch) { return ctx.measureText(ch).width; });
+      var total = widths.reduce(function (a, b) { return a + b; }, 0) + spacing * (chars.length - 1);
+      var run = -total / 2;
+      chars.forEach(function (ch, i) {
+        var mid = run + widths[i] / 2;
+        run += widths[i] + spacing;
+        var a = top ? -Math.PI / 2 + mid / radius : Math.PI / 2 - mid / radius;
+        ctx.save();
+        ctx.translate(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+        ctx.rotate(top ? a + Math.PI / 2 : a - Math.PI / 2);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    function starPath(ctx, x, y, outer, inner, points) {
+      ctx.beginPath();
+      for (var i = 0; i < points * 2; i++) {
+        var rad = i % 2 === 0 ? outer : inner;
+        var a = -Math.PI / 2 + (i * Math.PI) / points;
+        var px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad;
+        if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+    }
+
+    function drawSun(ctx, c, k, C, color) {
+      ctx.save();
+      ctx.translate(c, c);
+      ctx.fillStyle = C.raised;
+      var n = 24;
+      for (var i = 0; i < n; i++) {
+        var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        var long = i % 2 === 0;
+        var r0 = 150 * k, r1 = (long ? 292 : 236) * k, w = long ? 0.085 : 0.068;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a - w) * r0, Math.sin(a - w) * r0);
+        ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        ctx.lineTo(Math.cos(a + w) * r0, Math.sin(a + w) * r0);
+        ctx.closePath();
+        ctx.fill();
+      }
+      circlePath(ctx, 0, 0, 148 * k);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = C.plate;
+      circlePath(ctx, 0, 0, 124 * k);
+      ctx.fill();
+      // A serene face: this is the "head" side.
+      ctx.strokeStyle = C.engrave;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 9 * k;
+      ctx.beginPath(); ctx.arc(-44 * k, -26 * k, 22 * k, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(44 * k, -26 * k, 22 * k, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(2 * k, -14 * k); ctx.lineTo(-10 * k, 26 * k); ctx.lineTo(8 * k, 30 * k); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 30 * k, 40 * k, 0.22 * Math.PI, 0.78 * Math.PI); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawMoon(ctx, c, k, C) {
+      var off = makeCanvas(ctx.canvas.width, ctx.canvas.height);
+      var o = off.getContext('2d');
+      o.fillStyle = C.raised;
+      circlePath(o, c - 26 * k, c + 6 * k, 196 * k);
+      o.fill();
+      o.globalCompositeOperation = 'destination-out';
+      circlePath(o, c + 58 * k, c - 40 * k, 170 * k);
+      o.fill();
+      o.globalCompositeOperation = 'source-over';
+      starPath(o, c + 84 * k, c - 70 * k, 44 * k, 18 * k, 5); o.fill();
+      starPath(o, c + 150 * k, c + 34 * k, 30 * k, 12 * k, 5); o.fill();
+      starPath(o, c + 44 * k, c + 76 * k, 22 * k, 9 * k, 5); o.fill();
+      // Craters on the crescent.
+      o.fillStyle = C.plate;
+      circlePath(o, c - 150 * k, c + 30 * k, 20 * k); o.fill();
+      circlePath(o, c - 90 * k, c + 140 * k, 14 * k); o.fill();
+      circlePath(o, c - 160 * k, c - 60 * k, 12 * k); o.fill();
+      ctx.drawImage(off, 0, 0);
+    }
+
+    function drawFace(ctx, side, mode) {
+      var S = ctx.canvas.width, c = S / 2, k = S / 1024;
+      var color = mode === 'color';
+      var C = color
+        ? { field: '#a97d31', raised: '#ebc771', plate: '#d9b25d', engrave: '#8d6624', rim: '#dcb65f' }
+        : { field: '#6a6a6a', raised: '#ffffff', plate: '#dedede', engrave: '#8a8a8a', rim: '#f4f4f4' };
+      ctx.save();
+      ctx.clearRect(0, 0, S, S);
+      ctx.fillStyle = C.rim;
+      ctx.fillRect(0, 0, S, S);
+      if (color) {
+        var rg = ctx.createRadialGradient(c, c, 440 * k, c, c, 512 * k);
+        rg.addColorStop(0, '#b98d3c');
+        rg.addColorStop(0.5, '#ecce80');
+        rg.addColorStop(1, '#a57a2e');
+        ctx.fillStyle = rg;
+        ctx.fillRect(0, 0, S, S);
+      }
+      // Recessed field.
+      if (color) {
+        var fg = ctx.createRadialGradient(c - 120 * k, c - 160 * k, 30 * k, c, c, 470 * k);
+        fg.addColorStop(0, '#c89a47');
+        fg.addColorStop(1, '#9a702a');
+        ctx.fillStyle = fg;
+      } else {
+        ctx.fillStyle = C.field;
+      }
+      circlePath(ctx, c, c, 466 * k);
+      ctx.fill();
+      // Worn, matte micro texture.
+      for (var i = 0; i < 6000; i++) {
+        var a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 462 * k;
+        ctx.fillStyle = color
+          ? 'rgba(255,236,190,' + (rnd() * 0.07).toFixed(3) + ')'
+          : 'rgba(' + (rnd() < 0.5 ? '255,255,255' : '0,0,0') + ',' + (rnd() * 0.08).toFixed(3) + ')';
+        ctx.fillRect(c + Math.cos(a) * r, c + Math.sin(a) * r, 2 * k, 2 * k);
+      }
+      if (color) {
+        ctx.shadowColor = 'rgba(60,38,8,0.55)';
+        ctx.shadowBlur = 5 * k;
+        ctx.shadowOffsetY = 3 * k;
+      }
+      ctx.fillStyle = C.raised;
+      ctx.strokeStyle = C.raised;
+      // Beaded border.
+      for (var j = 0; j < 96; j++) {
+        var b = (j / 96) * Math.PI * 2;
+        circlePath(ctx, c + Math.cos(b) * 444 * k, c + Math.sin(b) * 444 * k, 7.5 * k);
+        ctx.fill();
+      }
+      ctx.lineWidth = 7 * k;
+      circlePath(ctx, c, c, 334 * k);
+      ctx.stroke();
+      var serif = 'Cinzel, "Trajan Pro", "Times New Roman", serif';
+      arcText(ctx, side === 'H' ? 'HEADS' : 'TAILS', c, c, 386 * k, true, '700 ' + 70 * k + 'px ' + serif, 16 * k);
+      arcText(ctx, side === 'H' ? 'MMXXVI' : 'FORTUNA', c, c, 388 * k, false, '700 ' + 50 * k + 'px ' + serif, 12 * k);
+      [0, Math.PI].forEach(function (a2) {
+        var x = c + Math.cos(a2) * 386 * k, y = c + Math.sin(a2) * 386 * k;
+        starPath(ctx, x, y, 16 * k, 6 * k, 4);
+        ctx.fill();
+      });
+      if (side === 'H') drawSun(ctx, c, k, C, color);
+      else drawMoon(ctx, c, k, C);
+      ctx.restore();
+    }
+
+    var faces = {};
+    ['H', 'T'].forEach(function (side) {
+      var colorCanvas = makeCanvas(1024, 1024);
+      var bumpCanvas = makeCanvas(1024, 1024);
+      var map = new T3.CanvasTexture(colorCanvas);
+      map.encoding = T3.sRGBEncoding;
+      map.anisotropy = maxAniso;
+      var bump = new T3.CanvasTexture(bumpCanvas);
+      bump.anisotropy = maxAniso;
+      faces[side] = {
+        colorCanvas: colorCanvas, bumpCanvas: bumpCanvas, map: map, bump: bump,
+        material: new T3.MeshStandardMaterial({ map: map, bumpMap: bump, bumpScale: 0.022, metalness: 1, roughness: 0.3 })
+      };
+    });
+    function paintFaces() {
+      ['H', 'T'].forEach(function (side) {
+        var f = faces[side];
+        drawFace(f.colorCanvas.getContext('2d'), side, 'color');
+        drawFace(f.bumpCanvas.getContext('2d'), side, 'bump');
+        f.map.needsUpdate = true;
+        f.bump.needsUpdate = true;
+      });
+    }
+    paintFaces();
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('700 70px Cinzel').then(paintFaces).catch(function () {});
+    }
+
+    function makeReeding(mode) {
+      var c = makeCanvas(16, 4), g = c.getContext('2d');
+      var grd = g.createLinearGradient(0, 0, 16, 0);
+      var lo = mode === 'color' ? '#8e6726' : '#404040';
+      var hi = mode === 'color' ? '#e8c673' : '#ffffff';
+      grd.addColorStop(0, lo); grd.addColorStop(0.5, hi); grd.addColorStop(1, lo);
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 16, 4);
+      var t = new T3.CanvasTexture(c);
+      t.wrapS = T3.RepeatWrapping;
+      t.repeat.set(150, 1);
+      if (mode === 'color') t.encoding = T3.sRGBEncoding;
+      return t;
+    }
+    var edgeMat = new T3.MeshStandardMaterial({
+      map: makeReeding('color'), bumpMap: makeReeding('bump'), bumpScale: 0.015, metalness: 1, roughness: 0.36
+    });
+
+    var coin = new T3.Group();
+    var edgeMesh = new T3.Mesh(new T3.CylinderGeometry(R, R, TH, 128, 1, true), edgeMat);
+    var headsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128), faces.H.material);
+    headsMesh.rotation.x = -Math.PI / 2;
+    headsMesh.position.y = TH / 2;
+    var tailsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128), faces.T.material);
+    tailsMesh.rotation.x = Math.PI / 2;
+    tailsMesh.position.y = -TH / 2;
+    [edgeMesh, headsMesh, tailsMesh].forEach(function (m) { m.castShadow = true; coin.add(m); });
+    scene.add(coin);
+
+    /* ================= Table, lamp, atmosphere ================= */
+    var TABLE_R = 24;
+    var LAMP_Y = 58;
+
+    function makeWood() {
+      var S = 1024, c = makeCanvas(S, S), g = c.getContext('2d');
+      g.fillStyle = '#3b2517';
+      g.fillRect(0, 0, S, S);
+      for (var i = 0; i < 16; i++) {
+        var y = rnd() * S, h = 40 + rnd() * 140;
+        var grd = g.createLinearGradient(0, y, 0, y + h);
+        var tone = rnd() < 0.5 ? '90,58,34' : '28,16,9';
+        grd.addColorStop(0, 'rgba(' + tone + ',0)');
+        grd.addColorStop(0.5, 'rgba(' + tone + ',' + (0.12 + rnd() * 0.2).toFixed(2) + ')');
+        grd.addColorStop(1, 'rgba(' + tone + ',0)');
+        g.fillStyle = grd;
+        g.fillRect(0, y, S, h);
+      }
+      for (var j = 0; j < 460; j++) {
+        var y0 = rnd() * S, amp = 2 + rnd() * 10, freq = (1 + Math.floor(rnd() * 3)) * Math.PI * 2 / S, ph = rnd() * 6.28;
+        g.strokeStyle = rnd() < 0.62
+          ? 'rgba(20,11,5,' + (0.15 + rnd() * 0.35).toFixed(2) + ')'
+          : 'rgba(118,78,46,' + (0.06 + rnd() * 0.14).toFixed(2) + ')';
+        g.lineWidth = 0.6 + rnd() * 2.2;
+        [-S, 0, S].forEach(function (shift) {
+          g.beginPath();
+          for (var x = 0; x <= S; x += 16) {
+            var yy = y0 + shift + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 3 + ph * 2) * amp * 0.25;
+            if (x) g.lineTo(x, yy); else g.moveTo(x, yy);
+          }
+          g.stroke();
+        });
+      }
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      t.wrapS = t.wrapT = T3.RepeatWrapping;
+      t.repeat.set(2, 2);
+      t.anisotropy = maxAniso;
+      return t;
+    }
+
+    var tableTop = new T3.Mesh(
+      new T3.CircleGeometry(TABLE_R, 128),
+      new T3.MeshStandardMaterial({ map: makeWood(), roughness: 0.64, metalness: 0, envMapIntensity: 0.3 })
+    );
+    tableTop.rotation.x = -Math.PI / 2;
+    tableTop.receiveShadow = true;
+    scene.add(tableTop);
+    var tableEdge = new T3.Mesh(
+      new T3.CylinderGeometry(TABLE_R, TABLE_R - 0.5, 2.2, 128, 1, true),
+      new T3.MeshStandardMaterial({ color: 0x22150c, roughness: 0.6 })
+    );
+    tableEdge.position.y = -1.1;
+    scene.add(tableEdge);
+
+    var spot = new T3.SpotLight(0xffd6a0, 2.3, 0, 0.39, 0.6, 1);
+    spot.position.set(0, LAMP_Y - 1, 0);
+    spot.target.position.set(0, 0, 0);
+    spot.castShadow = true;
+    spot.shadow.mapSize.set(2048, 2048);
+    spot.shadow.camera.near = 18;
+    spot.shadow.camera.far = 70;
+    spot.shadow.bias = -0.0004;
+    scene.add(spot, spot.target);
+    scene.add(new T3.HemisphereLight(0x456a74, 0x1a0f08, 0.45));
+    var rim = new T3.DirectionalLight(0x9fc4d6, 0.7);
+    rim.position.set(-6, 14, -14);
+    scene.add(rim);
+
+    function makeGlow() {
+      var c = makeCanvas(64, 64), g = c.getContext('2d');
+      var grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, 'rgba(255,255,255,1)');
+      grd.addColorStop(0.35, 'rgba(255,255,255,0.5)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 64, 64);
+      return new T3.CanvasTexture(c);
+    }
+    var glowTex = makeGlow();
+
+    // Pendant lamp overhead: the coin flies up toward it.
+    var lamp = new T3.Group();
+    lamp.position.y = LAMP_Y;
+    var shade = new T3.Mesh(
+      new T3.CylinderGeometry(1.6, 4.4, 3.4, 48, 1, true),
+      new T3.MeshStandardMaterial({ color: 0x1d2b2b, metalness: 0.7, roughness: 0.35, side: T3.DoubleSide })
+    );
+    lamp.add(shade);
+    var bulb = new T3.Mesh(new T3.SphereGeometry(1.2, 24, 16), new T3.MeshBasicMaterial({ color: new T3.Color(0xfff0d0).multiplyScalar(2.2), fog: false }));
+    bulb.position.y = -0.9;
+    lamp.add(bulb);
+    var cord = new T3.Mesh(new T3.CylinderGeometry(0.08, 0.08, 80, 8), new T3.MeshStandardMaterial({ color: 0x111616 }));
+    cord.position.y = 41.7;
+    lamp.add(cord);
+    var halo = new T3.Sprite(new T3.SpriteMaterial({ map: glowTex, color: 0xffcf8a, blending: T3.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0.85 }));
+    halo.scale.set(12, 12, 1);
+    halo.position.y = -1.4;
+    lamp.add(halo);
+    scene.add(lamp);
+
+    // Visible beam of light from the lamp to the table.
+    var coneH = LAMP_Y - 1, coneR = TABLE_R - 2;
+    var beam = new T3.Mesh(
+      new T3.ConeGeometry(coneR, coneH, 64, 1, true),
+      new T3.ShaderMaterial({
+        uniforms: { uColor: { value: new T3.Color(0xffc978) }, uStrength: { value: 0.13 } },
+        vertexShader: [
+          'varying vec3 vN; varying vec3 vView; varying float vH;',
+          'void main(){',
+          '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+          '  vView = -mv.xyz; vN = normalMatrix * normal; vH = uv.y;',
+          '  gl_Position = projectionMatrix * mv;',
+          '}'
+        ].join('\n'),
+        fragmentShader: [
+          'uniform vec3 uColor; uniform float uStrength;',
+          'varying vec3 vN; varying vec3 vView; varying float vH;',
+          'void main(){',
+          '  float f = pow(abs(dot(normalize(vN), normalize(vView))), 2.0);',
+          '  float a = f * uStrength * mix(0.3, 1.0, vH);',
+          '  gl_FragColor = vec4(uColor * a, 1.0);',
+          '}'
+        ].join('\n'),
+        transparent: true,
+        blending: T3.AdditiveBlending,
+        depthWrite: false,
+        side: T3.DoubleSide
+      })
+    );
+    beam.position.y = coneH / 2;
+    scene.add(beam);
+
+    // Dust motes: they stream past as the camera rides up with the coin.
+    var DUST = reduceMotion ? 260 : 800;
+    var dustPos = new Float32Array(DUST * 3);
+    var dustCol = new Float32Array(DUST * 3);
+    var dustVel = new Float32Array(DUST);
+    for (var d = 0; d < DUST; d++) {
+      var dr = Math.sqrt(rnd()) * 30, da = rnd() * Math.PI * 2, dy = 0.4 + rnd() * 60;
+      dustPos[d * 3] = Math.cos(da) * dr;
+      dustPos[d * 3 + 1] = dy;
+      dustPos[d * 3 + 2] = Math.sin(da) * dr;
+      var coneAt = coneR * (1 - dy / coneH);
+      var lit = dr < coneAt ? 1 : Math.max(0.12, 1 - (dr - coneAt) / 6);
+      var tint = 0.75 + rnd() * 0.25;
+      dustCol[d * 3] = lit * tint;
+      dustCol[d * 3 + 1] = lit * tint * 0.82;
+      dustCol[d * 3 + 2] = lit * tint * 0.58;
+      dustVel[d] = 0.03 + rnd() * 0.12;
+    }
+    var dustGeo = new T3.BufferGeometry();
+    dustGeo.setAttribute('position', new T3.BufferAttribute(dustPos, 3));
+    dustGeo.setAttribute('color', new T3.BufferAttribute(dustCol, 3));
+    var dust = new T3.Points(dustGeo, new T3.PointsMaterial({
+      size: 0.07, map: glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: T3.AdditiveBlending, sizeAttenuation: true
+    }));
+    scene.add(dust);
+
+    // Far-off room lights, out of focus.
+    for (var bk = 0; bk < 34; bk++) {
+      var ba = rnd() * Math.PI * 2, brad = 85 + rnd() * 50;
+      var bokeh = new T3.Sprite(new T3.SpriteMaterial({
+        map: glowTex,
+        color: [0xf4b860, 0x6fa8a0, 0xe8dcc0, 0xd98a52][bk % 4],
+        blending: T3.AdditiveBlending, depthWrite: false, fog: false, transparent: true,
+        opacity: 0.1 + rnd() * 0.22
+      }));
+      var bs = 3 + rnd() * 8;
+      bokeh.scale.set(bs, bs, 1);
+      bokeh.position.set(Math.cos(ba) * brad, -15 + rnd() * 80, Math.sin(ba) * brad);
+      scene.add(bokeh);
+    }
+
+    /* ================= Sound ================= */
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var actx = null, master = null, noiseBuf = null, whooshGain = null, whooshFilter = null;
+    function ensureAudio() {
+      if (!AC) return;
+      try {
+        if (!actx) {
+          actx = new AC();
+          master = actx.createGain();
+          master.gain.value = state.muted ? 0 : 0.9;
+          master.connect(actx.destination);
+          noiseBuf = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
+          var data = noiseBuf.getChannelData(0);
+          for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+          var src = actx.createBufferSource();
+          src.buffer = noiseBuf;
+          src.loop = true;
+          whooshFilter = actx.createBiquadFilter();
+          whooshFilter.type = 'bandpass';
+          whooshFilter.frequency.value = 800;
+          whooshFilter.Q.value = 0.9;
+          whooshGain = actx.createGain();
+          whooshGain.gain.value = 0;
+          src.connect(whooshFilter);
+          whooshFilter.connect(whooshGain);
+          whooshGain.connect(master);
+          src.start();
+        }
+        if (actx.state === 'suspended') actx.resume();
+      } catch (e) { actx = null; }
+    }
+    function ring(base, parts, gain) {
+      if (!actx) return;
+      var t0 = actx.currentTime;
+      parts.forEach(function (p) {
+        var o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine';
+        o.frequency.value = base * p[0];
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(Math.max(0.0002, gain * p[1]), t0 + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + p[2]);
+        o.connect(g);
+        g.connect(master);
+        o.start(t0);
+        o.stop(t0 + p[2] + 0.05);
+      });
+    }
+    function noiseHit(freq, type, gain, decay) {
+      if (!actx) return;
+      var t0 = actx.currentTime;
+      var s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+      s.buffer = noiseBuf;
+      f.type = type;
+      f.frequency.value = freq;
+      g.gain.setValueAtTime(Math.max(0.0002, gain), t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+      s.connect(f); f.connect(g); g.connect(master);
+      s.start(t0, Math.random() * 1.5);
+      s.stop(t0 + decay + 0.05);
+    }
+    function soundFlick() {
+      ring(2400 + rnd() * 140, [[1, 1, 1.3], [2.71, 0.45, 0.8], [5.2, 0.25, 0.45], [8.4, 0.12, 0.3]], 0.085);
+      noiseHit(5000, 'highpass', 0.05, 0.03);
+    }
+    function soundClink(k) {
+      ring(3000 + rnd() * 500, [[1, 1, 0.26], [1.63, 0.6, 0.18], [2.47, 0.4, 0.12], [3.9, 0.25, 0.08]], 0.12 * k);
+      noiseHit(700, 'lowpass', 0.35 * k, 0.07);
+    }
+    function soundTick(k, pitch) {
+      ring(3600 * pitch, [[1, 1, 0.05], [1.7, 0.5, 0.04]], 0.05 * k + 0.004);
+      noiseHit(6000, 'highpass', 0.02 * k + 0.003, 0.02);
+    }
+    function soundSettle() {
+      ring(2900, [[1, 1, 0.45], [2.1, 0.3, 0.25]], 0.03);
+    }
+    function setWhoosh(level, freq) {
+      if (!actx || !whooshGain) return;
+      var t = actx.currentTime;
+      whooshGain.gain.setTargetAtTime(level, t, 0.015);
+      whooshFilter.frequency.setTargetAtTime(freq, t, 0.03);
+    }
+
+    /* ================= Toss motion ================= */
+    var AX = new T3.Vector3(1, 0, 0), AY = new T3.Vector3(0, 1, 0), AZ = new T3.Vector3(0, 0, 1);
+    var qTmp = new T3.Quaternion(), qTmp2 = new T3.Quaternion(), axisTmp = new T3.Vector3();
+
+    // Orientation = yaw, then a small tilt of the flip axis, then the end-over-end flip.
+    function flipQuat(out, psi, beta, theta) {
+      out.setFromAxisAngle(AY, psi);
+      qTmp.setFromAxisAngle(AZ, beta);
+      out.multiply(qTmp);
+      qTmp2.setFromAxisAngle(AX, theta);
+      out.multiply(qTmp2);
+      return out;
+    }
+    // Height of the centre when the lowest point of a tilted rim touches the table.
+    function contactY(tilt) {
+      return R * Math.abs(Math.sin(tilt)) + (TH / 2) * Math.cos(tilt);
+    }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function smooth01(t) { return t * t * (3 - 2 * t); }
+    function smoothRange(e0, e1, x) { var t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return smooth01(t); }
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    var rest = {
+      pos: new T3.Vector3(0, REST_Y, 0),
+      theta: state.face === 'T' ? Math.PI : 0,
+      psi: 0.18
+    };
+    coin.position.copy(rest.pos);
+    flipQuat(coin.quaternion, rest.psi, 0, rest.theta);
+
+    var phase = 'idle';
+    var phaseT = 0;
+    var toss = null;
+    var shake = 0;
+
+    function startToss() {
+      if (phase !== 'idle') return;
+      ensureAudio();
+      var face = fairFace();
+      var H = reduceMotion ? 5.5 + rnd() * 1.5 : 18 + rnd() * 8;
+      var T = reduceMotion ? 1.15 : 1.95 + ((H - 18) / 8) * 0.45;
+      var d1 = 0.5 + rnd() * 0.25;
+      var d2 = 0.2 + rnd() * 0.12;
+      var y0 = REST_Y;
+      var yTouch = contactY(d1);
+      var g = (8 * H) / (T * T);
+      var v0 = (yTouch - y0 + 0.5 * g * T * T) / T;
+      var whole = reduceMotion ? 3 + Math.floor(rnd() * 2) : 7 + Math.floor(rnd() * 3);
+      var fromBase = rest.theta;            // 0 (heads up) or PI (tails up)
+      var toBase = face === 'H' ? 0 : Math.PI;
+      var extra = fromBase === toBase ? 0 : Math.PI;
+      var thetaFinal = fromBase + whole * Math.PI * 2 + extra;
+      var psiF = (rnd() - 0.5) * 0.7;
+      var ang = rnd() * Math.PI * 2, rad = rnd() * 1.4;
+      toss = {
+        face: face,
+        H: H, T: T, g: g, v0: v0, y0: y0,
+        sx: rest.pos.x, sz: rest.pos.z,
+        ex: rest.pos.x * 0.35 + Math.cos(ang) * rad,
+        ez: rest.pos.z * 0.35 + Math.sin(ang) * rad,
+        theta0: fromBase, thetaFinal: thetaFinal, thetaTouch: thetaFinal - d1,
+        turns: whole + extra / (Math.PI * 2),
+        psi0: rest.psi, psiF: psiF, yawWob: (rnd() - 0.5) * 1.2,
+        beta: (rnd() < 0.5 ? -1 : 1) * (0.16 + rnd() * 0.14),
+        orbitDir: rnd() < 0.5 ? -1 : 1,
+        d1: d1, d2: d2, hop: 0.45 + rnd() * 0.4, Tc: 0.3, Td: 1.6,
+        wdir: rnd() < 0.5 ? -1 : 1, K: 7.5, phi0: Math.PI - psiF, tickIdx: 0,
+        qFinal: flipQuat(new T3.Quaternion(), psiF, 0, toBase)
+      };
+      phase = 'flight';
+      phaseT = 0;
+      soundFlick();
+      onLaunchUI();
+    }
+
+    function impact(k) {
+      if (!reduceMotion) shake = Math.max(shake, 0.16 * k);
+      soundClink(k);
+      try { if (navigator.vibrate) navigator.vibrate(k > 0.8 ? 16 : 8); } catch (e) { /* no haptics */ }
+    }
+
+    function settle() {
+      phase = 'idle';
+      rest.pos.set(toss.ex, REST_Y, toss.ez);
+      rest.theta = toss.face === 'H' ? 0 : Math.PI;
+      rest.psi = toss.psiF;
+      coin.position.copy(rest.pos);
+      coin.quaternion.copy(toss.qFinal);
+      setWhoosh(0, 600);
+      soundSettle();
+      onResultUI(toss);
+    }
+
+    function updateCoin(dt) {
+      if (phase === 'idle') return;
+      phaseT += dt;
+      if (phase === 'flight' && phaseT >= toss.T) { phaseT -= toss.T; phase = 'hop'; impact(1); setWhoosh(0, 600); }
+      if (phase === 'hop' && phaseT >= toss.Tc) { phaseT -= toss.Tc; phase = 'wobble'; impact(0.4); }
+      if (phase === 'wobble' && phaseT >= toss.Td) { settle(); return; }
+
+      var P = coin.position, Q = coin.quaternion, s;
+      if (phase === 'flight') {
+        var t = phaseT;
+        s = t / toss.T;
+        P.x = lerp(toss.sx, toss.ex, s);
+        P.z = lerp(toss.sz, toss.ez, s);
+        P.y = toss.y0 + toss.v0 * t - 0.5 * toss.g * t * t;
+        var theta = lerp(toss.theta0, toss.thetaTouch, s);
+        var psi = lerp(toss.psi0, toss.psiF, smooth01(s)) + toss.yawWob * Math.sin(Math.PI * s);
+        flipQuat(Q, psi, toss.beta * Math.sin(Math.PI * s), theta);
+        var edgeOn = Math.abs(Math.sin(theta));
+        var env = Math.pow(Math.sin(Math.PI * Math.min(1, s * 1.05)), 0.6);
+        setWhoosh(0.05 * env * (0.3 + 0.7 * edgeOn), 600 + 1300 * edgeOn);
+      } else if (phase === 'hop') {
+        s = phaseT / toss.Tc;
+        var tilt = lerp(toss.d1, toss.d2, easeOutCubic(s));
+        P.set(toss.ex, contactY(tilt) + toss.hop * 4 * s * (1 - s), toss.ez);
+        flipQuat(Q, toss.psiF, 0, toss.thetaFinal - tilt);
+      } else if (phase === 'wobble') {
+        // Settles like a spun coin: the tilt shrinks while the rocking speeds up.
+        s = phaseT / toss.Td;
+        var alpha = toss.d2 * Math.pow(1 - s, 1.6);
+        var prog = -Math.log(1 - 0.985 * s);
+        var phi = toss.phi0 + toss.wdir * toss.K * prog;
+        P.set(toss.ex, contactY(alpha), toss.ez);
+        axisTmp.set(Math.cos(phi), 0, Math.sin(phi));
+        Q.setFromAxisAngle(axisTmp, alpha).multiply(toss.qFinal);
+        var idx = Math.floor((toss.K * prog) / (Math.PI / 2));
+        if (idx > toss.tickIdx) {
+          toss.tickIdx = idx;
+          soundTick(alpha / toss.d2, 1 + s * 0.6);
+        }
+      }
+    }
+
+    /* ================= Camera: rides up with the coin ================= */
+    var camPos = new T3.Vector3(), camLook = new T3.Vector3(), wantPos = new T3.Vector3(), wantLook = new T3.Vector3();
+    var camFov = 42;
+    var clock = 0;
+
+    function framing() { return Math.max(1, 0.78 / camera.aspect); }
+    function baseFov() { return camera.aspect < 1 ? 48 : 40; }
+
+    function updateCamera(dt) {
+      var f = framing();
+      var c = coin.position;
+      var rateP, rateL, fov = baseFov();
+      if (reduceMotion) {
+        wantPos.set(rest.pos.x, 7.5 * f, rest.pos.z + 9 * f);
+        wantLook.set(rest.pos.x, phase === 'idle' ? 0.2 : 2.6, rest.pos.z + 0.4 * f);
+        rateP = 2; rateL = 3;
+      } else if (phase === 'flight') {
+        var s = phaseT / toss.T;
+        var orbit = toss.orbitDir * 0.95 * Math.sin(Math.PI * s);
+        var dist = (4.6 + 1.4 * Math.sin(Math.PI * s)) * f;
+        var yOff = lerp(-1.8, 2.8, smoothRange(0.3, 0.8, s));
+        wantPos.set(c.x + Math.sin(orbit) * dist, c.y + yOff, c.z + Math.cos(orbit) * dist);
+        wantLook.copy(c);
+        rateP = 5.5; rateL = 22; fov += 10;
+      } else if (phase === 'hop' || phase === 'wobble') {
+        wantPos.set(c.x, 3.8 * f, c.z + 3.6 * f);
+        wantLook.set(c.x, 0.1, c.z + 0.3 * f);
+        rateP = 3.2; rateL = 8; fov += 2;
+      } else {
+        wantPos.set(c.x + Math.sin(clock * 0.25) * 0.25, 5.2 * f, c.z + 3.9 * f);
+        wantLook.set(c.x, 0.1, c.z + 0.55 * f);
+        rateP = 1.8; rateL = 3;
+      }
+      camPos.lerp(wantPos, 1 - Math.exp(-rateP * dt));
+      camLook.lerp(wantLook, 1 - Math.exp(-rateL * dt));
+      if (camPos.y < 0.7) camPos.y = 0.7;
+      camFov += (fov - camFov) * (1 - Math.exp(-3 * dt));
+      camera.position.copy(camPos);
+      if (shake > 0.0005) {
+        camera.position.x += (Math.random() - 0.5) * shake;
+        camera.position.y += (Math.random() - 0.5) * shake;
+        camera.position.z += (Math.random() - 0.5) * shake;
+        shake *= Math.exp(-dt * 9);
+      }
+      camera.fov = camFov;
+      camera.updateProjectionMatrix();
+      camera.lookAt(camLook);
+    }
+
+    function updateDust(dt) {
+      var arr = dustGeo.attributes.position.array;
+      for (var i = 0; i < DUST; i++) {
+        var y = arr[i * 3 + 1] + dustVel[i] * dt;
+        arr[i * 3 + 1] = y > 60.4 ? 0.4 : y;
+      }
+      dustGeo.attributes.position.needsUpdate = true;
+      dust.rotation.y += dt * 0.012;
+    }
+
+    /* ================= Resize & loop ================= */
+    function resize() {
+      var w = window.innerWidth || 1, h = window.innerHeight || 1;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Open on a slow settle into the resting view.
+    camFov = baseFov();
+    camPos.set(0, 11 * framing(), 11 * framing());
+    camLook.set(0, 0, 0);
+
+    var last = performance.now();
+    function frame(now) {
+      var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+      last = now;
+      clock += dt;
+      updateCoin(dt);
+      updateCamera(dt);
+      updateDust(dt);
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    /* ================= Interface ================= */
+    var resultEl = $('result'), tossBtn = $('tossBtn'), hintEl = $('hint');
+    var NAMES = { H: 'Heads', T: 'Tails' };
+    var IDLE_HINT = 'Tap the table or press Space to toss';
+
+    function renderTally() {
+      $('nH').textContent = state.counts.H;
+      $('nT').textContent = state.counts.T;
+      var list = $('history');
+      list.textContent = '';
+      state.history.slice(0, 12).forEach(function (f) {
+        var li = document.createElement('li');
+        li.className = f === 'H' ? 'h' : 't';
+        li.textContent = f;
+        li.title = NAMES[f];
+        list.appendChild(li);
+      });
+      $('reset').hidden = state.counts.H + state.counts.T === 0;
+    }
+
+    function renderCall() {
+      Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (chip) {
+        chip.setAttribute('aria-pressed', String(chip.dataset.call === state.call));
+      });
+    }
+
+    function renderSound() {
+      var btn = $('sound');
+      btn.setAttribute('aria-pressed', String(!state.muted));
+      btn.setAttribute('aria-label', state.muted ? 'Sound off' : 'Sound on');
+      if (actx && master) master.gain.setTargetAtTime(state.muted ? 0 : 0.9, actx.currentTime, 0.02);
+    }
+
+    function onLaunchUI() {
+      resultEl.classList.remove('show');
+      tossBtn.disabled = true;
+      tossBtn.textContent = 'In the air';
+      hintEl.textContent = '';
+    }
+
+    function turnsLabel(turns) {
+      var whole = Math.floor(turns);
+      return turns - whole > 0.25 ? whole + '½' : String(whole);
+    }
+
+    function onResultUI(t) {
+      var face = t.face;
+      state.counts[face] += 1;
+      state.history.unshift(face);
+      state.history = state.history.slice(0, 40);
+      state.face = face;
+      persist();
+
+      var streak = 0;
+      while (streak < state.history.length && state.history[streak] === face) streak++;
+      var total = state.counts.H + state.counts.T;
+
+      $('resEyebrow').textContent = face === 'H' ? 'Obverse · sun side up' : 'Reverse · moon side up';
+      $('resWord').textContent = NAMES[face];
+      $('resMeta').textContent = 'Toss ' + total + ' · peak ' + Math.round(t.H * UNIT_CM) + ' cm · ' + turnsLabel(t.turns) + ' turns' +
+        (streak >= 2 ? ' · ' + streak + ' in a row' : '');
+      var verdict = $('verdict');
+      verdict.className = 'verdict';
+      if (state.call) {
+        var won = state.call === face;
+        verdict.textContent = won ? 'You called it.' : 'You called ' + NAMES[state.call] + '.';
+        verdict.classList.add(won ? 'win' : 'lose');
+      } else {
+        verdict.textContent = '';
+      }
+      void resultEl.offsetWidth;
+      resultEl.classList.add('show');
+      tossBtn.disabled = false;
+      tossBtn.textContent = 'Toss again';
+      hintEl.textContent = IDLE_HINT;
+      renderTally();
+    }
+
+    tossBtn.addEventListener('click', startToss);
+    canvas.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      startToss();
+    });
+    window.addEventListener('keydown', function (e) {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      var onButton = e.target && e.target.closest && e.target.closest('button');
+      if ((e.code === 'Space' || e.key === 'Enter') && !onButton) {
+        e.preventDefault();
+        startToss();
+      } else if (e.key === 'h' || e.key === 'H' || e.key === 't' || e.key === 'T') {
+        var c = e.key.toUpperCase();
+        state.call = state.call === c ? null : c;
+        renderCall();
+        persist();
+      }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (chip) {
+      chip.addEventListener('click', function () {
+        state.call = state.call === chip.dataset.call ? null : chip.dataset.call;
+        renderCall();
+        persist();
+      });
+    });
+    $('sound').addEventListener('click', function () {
+      state.muted = !state.muted;
+      ensureAudio();
+      renderSound();
+      persist();
+    });
+    $('reset').addEventListener('click', function () {
+      state.counts = { H: 0, T: 0 };
+      state.history = [];
+      persist();
+      renderTally();
+      resultEl.classList.remove('show');
+    });
+
+    renderTally();
+    renderCall();
+    renderSound();
+    hintEl.textContent = IDLE_HINT;
+  }
+})();
+</script>
+</body>
+</html>
