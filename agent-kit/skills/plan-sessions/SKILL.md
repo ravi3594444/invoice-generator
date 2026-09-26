@@ -12,7 +12,7 @@ One agent session does its best work on one focused slice that fits comfortably 
 
 Run the `reuse-first` process, at least briefly. Templates, component libraries, and packages change the size a lot: a store built on a maintained starter might take a handful of sessions, and the same store from scratch dozens.
 
-If the request is too vague to size, ask the two or three questions that change the size most (for example: which pages, is there a backend, payments or not, which stack), or suggest `/grill-me` first.
+If the request is too vague to size, ask the two or three questions that change the size most (for example: which pages, is there a backend, payments or not, which stack), or suggest `/grill-me` first (or `/start-project` for a brand-new project).
 
 ## 2. Size it
 

@@ -8,6 +8,8 @@ argument-hint: "[what to build]"
 
 Don't write from scratch what already exists, is maintained, and is better tested than a first draft. E-commerce stores, portfolios, dashboards, and SaaS apps have been built thousands of times, and the hard parts (checkout flows, accessible components, responsive layouts, auth) are already solved in open-source projects. Your job is to pick good building blocks, wire them together, and write the product-specific logic.
 
+When starting a whole new project, use the `start-project` skill, which runs this process across every part of the product and alternates it with rounds of questions.
+
 ## The reuse ladder
 
 Take the first rung that fits:

@@ -8,6 +8,7 @@ The idea: code is not cheap. A codebase that is hard to change wastes what AI ca
 
 | Command | What it does |
 | --- | --- |
+| `/start-project <idea>` | Starts a new project by researching GitHub and the web (starters, components, managed services, similar open-source apps), asking you questions in rounds as it learns, and mapping every part of the product to a premade source. The result is the least custom code on top of proven infrastructure, easy to read and upgrade, plus a research report, decisions, glossary, and session plan. |
 | `reuse-first` | Before writing code, finds premade parts: UI component libraries (shadcn/ui, Magic UI, daisyUI, ...), starter templates and open-source repos (e-commerce, portfolio, SaaS), and packages. Reads their latest docs, then builds on them instead of from scratch. |
 | `plan-sessions` | For anything you ask it to build, says how big the job is and splits it into separate sessions: what goes first, what can run in parallel, and a ready-to-paste prompt for each. |
 | `/grill-me <idea>` | Interviews you round by round until you and the agent share one design. No code before that. |
@@ -20,7 +21,7 @@ The idea: code is not cheap. A codebase that is hard to change wastes what AI ca
 | `browser-check` | Opens a page in headless Chromium (Playwright), runs clicks and fills, reports console errors and failed requests, and takes a screenshot. |
 | `/gstack` and friends | gstack's suite: `/browse`, `/qa`, `/review`, `/ship`, `/investigate`, `/office-hours`, `/plan-eng-review`, `/retro`, and more. |
 
-The installer also adds a short workflow guide to `~/.claude/CLAUDE.md`, so every new session knows the rules: reuse premade parts first, size the job and split it into sessions, then grill, PRD, issues, TDD, browser check.
+The installer also adds a short workflow guide to `~/.claude/CLAUDE.md`, so every new session knows the rules: start new projects with research and questions, reuse premade parts first, size the job and split it into sessions, then grill, PRD, issues, TDD, browser check.
 
 Skills without a slash in the table are picked up by the agent on its own when they fit. You can still type them (`/tdd`, `/browser-check`, ...).
 

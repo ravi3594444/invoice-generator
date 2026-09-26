@@ -4,6 +4,7 @@ Code is not cheap: a codebase that is hard to change wastes everything an agent 
 
 **Whenever the user asks you to build something:**
 
+- **New project, or a big new area?** Run the `start-project` process: research GitHub and the web for starters, components, services, and similar open-source apps, ask clarifying questions in rounds as you learn, and aim for the least custom code on top of proven infrastructure. No scaffolding before the user approves the plan.
 - **Reuse before you write** (`reuse-first` skill). Look for premade UI components, starter templates, open-source repos, and packages, and read their latest docs, before writing code. Write only the glue and the product-specific logic yourself.
 - **Say how big it is** (`plan-sessions` skill). Unless it is a small fix, give a size estimate and split the work into sessions the user can run separately: what goes first, what can run in parallel, and a prompt for each.
 
