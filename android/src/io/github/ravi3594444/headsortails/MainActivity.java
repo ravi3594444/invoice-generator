@@ -4,8 +4,15 @@ import android.app.Activity;
 import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Display;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -30,6 +37,32 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        preferSixtyHertz();
+        createPage();
+    }
+
+    /**
+     * Asks for a steady 60 Hz at the current resolution. Most phones hold 60 fps with the 3D
+     * scene, where 90 or 120 Hz would drop frames and stutter. (Phones before Android 6 are
+     * 60 Hz anyway.)
+     */
+    private void preferSixtyHertz() {
+        if (Build.VERSION.SDK_INT < 23) return;
+        Display display = getWindowManager().getDefaultDisplay();
+        Display.Mode current = display.getMode();
+        for (Display.Mode mode : display.getSupportedModes()) {
+            if (mode.getPhysicalWidth() == current.getPhysicalWidth()
+                    && mode.getPhysicalHeight() == current.getPhysicalHeight()
+                    && Math.abs(mode.getRefreshRate() - 60f) < 1f) {
+                WindowManager.LayoutParams attrs = getWindow().getAttributes();
+                attrs.preferredDisplayModeId = mode.getModeId();
+                getWindow().setAttributes(attrs);
+                return;
+            }
+        }
+    }
+
+    private void createPage() {
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(0x0B, 0x14, 0x17));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -43,9 +76,28 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
 
-        web.setWebViewClient(new AssetClient(getAssets()));
+        web.setWebViewClient(new AssetClient(getAssets(), this));
         setContentView(web);
         web.loadUrl("https://" + HOST + "/index.html");
+    }
+
+    /**
+     * The page's renderer process was killed, usually to free memory while the app was in
+     * the background. Put a fresh page in place of the dead one; the tally is saved.
+     */
+    void restartPage() {
+        if (isFinishing()) return;
+        destroyPage();
+        createPage();
+    }
+
+    /** A WebView has to leave the view hierarchy before it is destroyed. */
+    private void destroyPage() {
+        if (web == null) return;
+        ViewGroup parent = (ViewGroup) web.getParent();
+        if (parent != null) parent.removeView(web);
+        web.destroy();
+        web = null;
     }
 
     @Override
@@ -70,27 +122,35 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        web.onResume();
+        if (web != null) {
+            web.onResume();
+            web.resumeTimers();
+        }
     }
 
     @Override
     protected void onPause() {
-        web.onPause();
+        if (web != null) {
+            web.onPause();
+            web.pauseTimers();
+        }
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
-        web.destroy();
+        destroyPage();
         super.onDestroy();
     }
 
     /** Serves the page and its files from the APK. Nothing is fetched from the network. */
     private static final class AssetClient extends WebViewClient {
         private final AssetManager assets;
+        private final MainActivity host;
 
-        AssetClient(AssetManager assets) {
+        AssetClient(AssetManager assets, MainActivity host) {
             this.assets = assets;
+            this.host = host;
         }
 
         @Override
@@ -117,6 +177,19 @@ public class MainActivity extends Activity {
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             // The page never navigates anywhere else; ignore anything that tries to.
             return !HOST.equals(Uri.parse(url).getHost());
+        }
+
+        // Android 8.0+ calls this when the page's renderer dies. Without it the app is killed
+        // or left frozen; with it, the page starts again. (Overrides an API 26 method, so no
+        // @Override while compiling against API 23.)
+        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    host.restartPage();
+                }
+            });
+            return true;
         }
 
         private static WebResourceResponse notFound() {

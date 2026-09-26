@@ -14,7 +14,7 @@
   :root {
     color-scheme: dark;
     --ink: #0B1417;
-    --ink-soft: rgba(11, 20, 23, 0.62);
+    --ink-soft: rgba(11, 20, 23, 0.74);
     --gold: #D2A54C;
     --gold-hi: #F3D48A;
     --silver: #D9DEE1;
@@ -156,7 +156,6 @@
     border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
     font: 700 13px/1 Manrope, "Segoe UI", system-ui, sans-serif;
     padding: 10px 14px; border-radius: 999px; cursor: pointer;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   }
   .chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #2A1C08; }
   .toss {
@@ -179,7 +178,6 @@
     border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
     font: 700 12px/1 Manrope, "Segoe UI", system-ui, sans-serif;
     padding: 8px 10px 8px 12px; border-radius: 999px; cursor: pointer;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   }
   .look svg { width: 12px; height: 12px; flex: none; }
   .look:disabled { opacity: 0.5; cursor: default; }
@@ -365,18 +363,24 @@
     var canvas = $('scene');
     var renderer;
     try {
-      renderer = new T3.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer = new T3.WebGLRenderer({ canvas: canvas, antialias: true, stencil: false, powerPreference: 'high-performance' });
     } catch (e) {
       showFallback('This browser could not start WebGL, which the 3D coin needs. Try another browser or device.');
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Phones get a lighter setup: fewer pixels, smaller textures, fewer particles.
+    var MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    var Q = MOBILE
+      ? { ratioCap: 1.5, aniso: 4, faceTex: 768, fieldTex: 1024, shadow: 1024, dust: 300, bokeh: 16 }
+      : { ratioCap: 2, aniso: 16, faceTex: 1024, fieldTex: 2048, shadow: 2048, dust: 800, bokeh: 34 };
+    var pixelRatio = Math.min(window.devicePixelRatio || 1, Q.ratioCap);
+    renderer.setPixelRatio(pixelRatio);
     renderer.outputEncoding = T3.sRGBEncoding;
     renderer.toneMapping = T3.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T3.PCFSoftShadowMap;
-    var maxAniso = renderer.capabilities.getMaxAnisotropy();
+    var maxAniso = Math.min(Q.aniso, renderer.capabilities.getMaxAnisotropy());
 
     var INK = 0x0B1417;
     var scene = new T3.Scene();
@@ -412,7 +416,7 @@
       tex.encoding = T3.sRGBEncoding;
       return new T3.Mesh(new T3.SphereGeometry(10, 32, 16), new T3.MeshBasicMaterial({ map: tex, side: T3.BackSide }));
     }
-    var tableEnv = (function () {
+    var tableEnvScene = (function () {
       var env = new T3.Scene();
       env.add(gradientSphere([[0, '#fff4e0'], [0.22, '#d2a263'], [0.42, '#5b503e'], [0.58, '#1d2a2b'], [1, '#2c1d12']]));
       var lampDisk = new T3.Mesh(new T3.CircleGeometry(2.6, 32), new T3.MeshBasicMaterial({ color: new T3.Color(7, 5.6, 3.8) }));
@@ -428,8 +432,9 @@
         p.lookAt(0, 0, 0);
         env.add(p);
       }
-      return bakeEnv(env);
+      return env;
     })();
+    var tableEnv = bakeEnv(tableEnvScene);
     scene.environment = tableEnv;
 
     /* ================= Coin ================= */
@@ -1092,7 +1097,7 @@
       if (coinSets[type]) return coinSets[type];
       var spec = COIN_TYPES[type], set = { faces: {}, edge: spec.edge() };
       ['H', 'T'].forEach(function (side) {
-        var colorCanvas = makeCanvas(1024, 1024), bumpCanvas = makeCanvas(1024, 1024);
+        var colorCanvas = makeCanvas(Q.faceTex, Q.faceTex), bumpCanvas = makeCanvas(Q.faceTex, Q.faceTex);
         var map = new T3.CanvasTexture(colorCanvas);
         map.encoding = T3.sRGBEncoding;
         map.anisotropy = maxAniso;
@@ -1132,6 +1137,20 @@
       headsMesh.material = set.faces.H.material;
       tailsMesh.material = set.faces.T.material;
       edgeMesh.material = set.edge;
+      // Free the other design's textures; it is drawn again if it is picked again.
+      Object.keys(coinSets).forEach(function (other) {
+        if (other === type) return;
+        var old = coinSets[other];
+        ['H', 'T'].forEach(function (side) {
+          old.faces[side].map.dispose();
+          old.faces[side].bump.dispose();
+          old.faces[side].material.dispose();
+        });
+        if (old.edge.map) old.edge.map.dispose();
+        if (old.edge.bumpMap) old.edge.bumpMap.dispose();
+        old.edge.dispose();
+        delete coinSets[other];
+      });
     }
     applyCoin(state.coin);
 
@@ -1180,14 +1199,26 @@
 
     var tableTop = new T3.Mesh(
       new T3.CircleGeometry(TABLE_R, 128),
-      new T3.MeshStandardMaterial({ map: makeWood(), roughness: 0.64, metalness: 0, envMapIntensity: 0.3 })
+      // Phong: the same lamplit wood, without a reflection lookup at every pixel of the table.
+      new T3.MeshPhongMaterial({ map: makeWood(), shininess: 10, specular: 0x21180f })
     );
     tableTop.rotation.x = -Math.PI / 2;
-    tableTop.receiveShadow = true;
     tableWorld.add(tableTop);
+    // Only a small patch under the coin takes shadows, so the table and the pitch aren't
+    // shadow-sampled across the whole screen every frame.
+    function makeShadowCatcher(size, opacity) {
+      var m = new T3.Mesh(new T3.PlaneGeometry(size, size),
+        new T3.ShadowMaterial({ opacity: opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = 0.01;
+      m.receiveShadow = true;
+      return m;
+    }
+    var tableCatcher = makeShadowCatcher(9, 0.55);
+    tableWorld.add(tableCatcher);
     var tableEdge = new T3.Mesh(
       new T3.CylinderGeometry(TABLE_R, TABLE_R - 0.5, 2.2, 128, 1, true),
-      new T3.MeshStandardMaterial({ color: 0x22150c, roughness: 0.6 })
+      new T3.MeshLambertMaterial({ color: 0x22150c })
     );
     tableEdge.position.y = -1.1;
     tableWorld.add(tableEdge);
@@ -1196,7 +1227,7 @@
     spot.position.set(0, LAMP_Y - 1, 0);
     spot.target.position.set(0, 0, 0);
     spot.castShadow = true;
-    spot.shadow.mapSize.set(2048, 2048);
+    spot.shadow.mapSize.set(Q.shadow, Q.shadow);
     spot.shadow.camera.near = 18;
     spot.shadow.camera.far = 70;
     spot.shadow.bias = -0.0004;
@@ -1205,8 +1236,6 @@
     var rim = new T3.DirectionalLight(0x9fc4d6, 0.7);
     rim.position.set(-6, 14, -14);
     tableWorld.add(rim);
-    var faceLight = new T3.PointLight(0xfff2dd, 0, 30, 2);
-    scene.add(faceLight);
 
     function makeGlow() {
       var c = makeCanvas(64, 64), g = c.getContext('2d');
@@ -1273,7 +1302,7 @@
     tableWorld.add(beam);
 
     // Dust motes: they stream past as the camera rides up with the coin.
-    var DUST = reduceMotion ? 260 : 800;
+    var DUST = reduceMotion ? 200 : Q.dust;
     var dustPos = new Float32Array(DUST * 3);
     var dustCol = new Float32Array(DUST * 3);
     var dustVel = new Float32Array(DUST);
@@ -1299,7 +1328,7 @@
     tableWorld.add(dust);
 
     // Far-off room lights, out of focus.
-    for (var bk = 0; bk < 34; bk++) {
+    for (var bk = 0; bk < Q.bokeh; bk++) {
       var ba = rnd() * Math.PI * 2, brad = 85 + rnd() * 50;
       var bokeh = new T3.Sprite(new T3.SpriteMaterial({
         map: glowTex,
@@ -1378,7 +1407,7 @@
 
     // The outfield: mowing stripes, the square, and the fielding circle.
     function makeOutfield(radius, stumpsZ) {
-      var S = 2048, c = makeCanvas(S, S), g = c.getContext('2d');
+      var S = Q.fieldTex, c = makeCanvas(S, S), g = c.getContext('2d');
       var px = S / (radius * 2), cx = S / 2, cy = S / 2;
       g.fillStyle = '#5c9a40';
       g.fillRect(0, 0, S, S);
@@ -1387,7 +1416,7 @@
         g.fillStyle = i % 2 ? 'rgba(236,255,200,0.08)' : 'rgba(18,54,12,0.08)';
         g.fillRect(x, 0, band, S);
       }
-      for (var j = 0; j < 70000; j++) {
+      for (var j = 0, dots = 70000 * (S / 2048) * (S / 2048); j < dots; j++) {
         g.fillStyle = rnd() < 0.5 ? 'rgba(28,66,18,0.2)' : 'rgba(176,214,122,0.14)';
         g.fillRect(rnd() * S, rnd() * S, 2, 2);
       }
@@ -1560,24 +1589,24 @@
       // Outfield, pitch and creases.
       var grassR = FIELD_R + 6 * M;
       var grass = new T3.Mesh(new T3.CircleGeometry(grassR, 160),
-        new T3.MeshStandardMaterial({ map: makeOutfield(grassR, STUMPS_Z), roughness: 0.95 }));
+        new T3.MeshLambertMaterial({ map: makeOutfield(grassR, STUMPS_Z) }));
       grass.rotation.x = -Math.PI / 2;
       grass.position.y = -0.5;
-      grass.receiveShadow = true;
       group.add(grass);
       var pitchTex = makePitchDetail();
       pitchTex.repeat.set(PITCH_W / (0.42 * M), PITCH_L / (0.42 * M));
       var pitch = new T3.Mesh(new T3.PlaneGeometry(PITCH_W, PITCH_L),
-        new T3.MeshStandardMaterial({ map: pitchTex, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+        new T3.MeshLambertMaterial({ map: pitchTex, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
       pitch.rotation.x = -Math.PI / 2;
-      pitch.receiveShadow = true;
       group.add(pitch);
-      var creaseMat = new T3.MeshStandardMaterial({ color: 0xf7f5ef, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      var catcher = makeShadowCatcher(10, 0.42);
+      catcher.position.y = 0.02;
+      group.add(catcher);
+      var creaseMat = new T3.MeshLambertMaterial({ color: 0xf7f5ef, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
       function crease(w, l, x, z) {
         var m = new T3.Mesh(new T3.PlaneGeometry(w, l), creaseMat);
         m.rotation.x = -Math.PI / 2;
         m.position.set(x, 0.15, z);
-        m.receiveShadow = true;
         group.add(m);
       }
       var LINE = 0.05 * M;
@@ -1609,7 +1638,7 @@
       });
 
       // Boundary rope, advertising boards and sight screens.
-      var rope = new T3.Mesh(new T3.TorusGeometry(FIELD_R, 0.07 * M, 8, 360), new T3.MeshStandardMaterial({ color: 0xf1ede2, roughness: 0.7 }));
+      var rope = new T3.Mesh(new T3.TorusGeometry(FIELD_R, 0.07 * M, 8, 360), new T3.MeshLambertMaterial({ color: 0xf1ede2 }));
       rope.rotation.x = Math.PI / 2;
       rope.position.y = 0.07 * M;
       group.add(rope);
@@ -1617,7 +1646,7 @@
         new T3.MeshBasicMaterial({ map: makeBoards(), side: T3.DoubleSide }));
       boards.position.y = 0.5 * M;
       group.add(boards);
-      var screenMat = new T3.MeshStandardMaterial({ color: 0xf6f6f1, roughness: 0.9 });
+      var screenMat = new T3.MeshLambertMaterial({ color: 0xf6f6f1 });
       [-1, 1].forEach(function (end) {
         var screen = new T3.Mesh(new T3.BoxGeometry(24 * M, 8 * M, 0.4 * M), screenMat);
         screen.position.set(0, 4 * M, end * (FIELD_R + 4.8 * M));
@@ -1627,28 +1656,28 @@
       // Stands in two tiers, a roof and four floodlight towers.
       var inner = FIELD_R + 6 * M, outer = FIELD_R + 40 * M;
       var lower = new T3.Mesh(new T3.CylinderGeometry(outer, inner, 24 * M, 160, 1, true),
-        new T3.MeshStandardMaterial({ map: makeCrowd(false), side: T3.BackSide, roughness: 1 }));
+        new T3.MeshLambertMaterial({ map: makeCrowd(false), side: T3.BackSide }));
       lower.position.y = 13.2 * M;
       group.add(lower);
       var concourse = new T3.Mesh(new T3.CylinderGeometry(outer, outer, 2.2 * M, 160, 1, true),
-        new T3.MeshStandardMaterial({ color: 0x2e343c, side: T3.DoubleSide, roughness: 1 }));
+        new T3.MeshLambertMaterial({ color: 0x2e343c, side: T3.DoubleSide }));
       concourse.position.y = 26.2 * M;
       group.add(concourse);
       var upper = new T3.Mesh(new T3.CylinderGeometry(outer + 16 * M, outer, 15 * M, 160, 1, true),
-        new T3.MeshStandardMaterial({ map: makeCrowd(true), side: T3.BackSide, roughness: 1 }));
+        new T3.MeshLambertMaterial({ map: makeCrowd(true), side: T3.BackSide }));
       upper.position.y = 34.7 * M;
       group.add(upper);
       var roofY = 47.2 * M;
       var roof = new T3.Mesh(new T3.RingGeometry(outer + 4 * M, outer + 30 * M, 160, 1),
-        new T3.MeshStandardMaterial({ color: 0x59636c, side: T3.DoubleSide, roughness: 0.8 }));
+        new T3.MeshLambertMaterial({ color: 0x59636c, side: T3.DoubleSide }));
       roof.rotation.x = Math.PI / 2;
       roof.position.y = roofY;
       group.add(roof);
       var fascia = new T3.Mesh(new T3.CylinderGeometry(outer + 4 * M, outer + 4 * M, 2.4 * M, 160, 1, true),
-        new T3.MeshStandardMaterial({ color: 0xe9eef1, side: T3.DoubleSide, roughness: 0.6 }));
+        new T3.MeshLambertMaterial({ color: 0xe9eef1, side: T3.DoubleSide }));
       fascia.position.y = roofY - 1.2 * M;
       group.add(fascia);
-      var poleMat = new T3.MeshStandardMaterial({ color: 0xb9c1c8, roughness: 0.6, metalness: 0.3 });
+      var poleMat = new T3.MeshLambertMaterial({ color: 0xb9c1c8 });
       var headMat = new T3.MeshBasicMaterial({ map: makeLampGrid() });
       [45, 135, 225, 315].forEach(function (deg) {
         var a = (deg * Math.PI) / 180, r = outer + 22 * M, h = 70 * M;
@@ -1678,6 +1707,8 @@
         var half = 5 + c.distanceTo(shadowAt) * 0.55;
         sun.target.position.copy(mid);
         sun.position.copy(mid).addScaledVector(SUN, 400);
+        catcher.position.x = shadowAt.x;
+        catcher.position.z = shadowAt.z;
         var cam = sun.shadow.camera;
         if (cam.right !== half) {
           cam.left = -half;
@@ -1698,7 +1729,7 @@
 
       scene.add(group);
       return {
-        group: group, env: bakeEnv(env), fog: new T3.FogExp2(0xcfe2ec, 0.000045),
+        group: group, env: bakeEnv(env), envScene: env, fog: new T3.FogExp2(0xcfe2ec, 0.000045),
         background: new T3.Color(0x9fd0f0), near: 0.3, far: 60000, exposure: 0.95,
         intro: function () { return new T3.Vector3(18, 70, 460); },
         toss: { h: 45, hr: 25, t: 2.3, tr: 0.5 }, flightRate: 8, update: update, surface: 'pitch'
@@ -1707,15 +1738,21 @@
 
     var WORLDS = {
       table: {
-        group: tableWorld, env: tableEnv, fog: scene.fog, background: scene.background, near: 0.05, far: 500, exposure: 1.05,
+        group: tableWorld, env: tableEnv, envScene: tableEnvScene, fog: scene.fog, background: scene.background, near: 0.05, far: 500, exposure: 1.05,
         intro: function () { var f = framing(); return new T3.Vector3(0, 11 * f, 11 * f); },
-        toss: { h: 18, hr: 8, t: 1.95, tr: 0.45 }, flightRate: 5.5, update: null, surface: 'table'
+        toss: { h: 18, hr: 8, t: 1.95, tr: 0.45 }, flightRate: 5.5, surface: 'table',
+        update: function (dt) {
+          updateDust(dt);
+          tableCatcher.position.x = coin.position.x;
+          tableCatcher.position.z = coin.position.z;
+        }
       },
       ground: null
     };
     var activeWorld = WORLDS.table;
     function setScene(name, withIntro) {
-      if (name === 'ground' && !WORLDS.ground) WORLDS.ground = buildGround();
+      var fresh = name === 'ground' && !WORLDS.ground;
+      if (fresh) WORLDS.ground = buildGround();
       var w = WORLDS[name] || WORLDS.table;
       Object.keys(WORLDS).forEach(function (key) {
         if (WORLDS[key]) WORLDS[key].group.visible = WORLDS[key] === w;
@@ -1728,6 +1765,9 @@
       camera.updateProjectionMatrix();
       activeWorld = w;
       document.body.classList.toggle('scene-ground', w !== WORLDS.table);
+      // Compile a new scene's shaders now rather than stuttering through its first frames.
+      if (fresh) renderer.compile(scene, camera);
+      perf.warm = 1.5;
       if (withIntro) {
         camPos.copy(w.intro()).add(coin.position);
         camLook.copy(coin.position);
@@ -1766,7 +1806,7 @@
       } catch (e) { actx = null; }
     }
     function ring(base, parts, gain, delay) {
-      if (!actx) return;
+      if (!actx || actx.state !== 'running') return;
       var t0 = actx.currentTime + (delay || 0);
       parts.forEach(function (p) {
         var o = actx.createOscillator(), g = actx.createGain();
@@ -1782,7 +1822,7 @@
       });
     }
     function noiseHit(freq, type, gain, decay) {
-      if (!actx) return;
+      if (!actx || actx.state !== 'running') return;
       var t0 = actx.currentTime;
       var s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
       s.buffer = noiseBuf;
@@ -1803,8 +1843,7 @@
       noiseHit(700, 'lowpass', 0.35 * k, 0.07);
     }
     function soundTick(k, pitch) {
-      ring(3600 * pitch, [[1, 1, 0.05], [1.7, 0.5, 0.04]], 0.05 * k + 0.004);
-      noiseHit(6000, 'highpass', 0.02 * k + 0.003, 0.02);
+      ring(3600 * pitch, [[1, 1, 0.05]], 0.05 * k + 0.004);
     }
     function soundSettle() {
       ring(2900, [[1, 1, 0.45], [2.1, 0.3, 0.25]], 0.03);
@@ -1825,7 +1864,7 @@
       });
     }
     function soundHeartbeat() {
-      if (!actx) return;
+      if (!actx || actx.state !== 'running') return;
       var t = actx.currentTime;
       thump(t, 0.42);
       thump(t + 0.18, 0.28);
@@ -2030,13 +2069,17 @@
       suspenseSound(dt);
     }
 
+    var lastTickAt = 0;
     function suspenseSound(dt) {
       var S = toss.susp, st = toss.post;
       var rate = Math.abs(st.rate);
       var step = phase === 'stand' || phase === 'spin' ? Math.PI : Math.PI / 2;
       st.tickAcc += rate * dt;
-      if (st.tickAcc >= step) {
-        st.tickAcc %= step;
+      var crossed = st.tickAcc >= step;
+      if (crossed) st.tickAcc %= step;
+      // At most one tick every 35 ms; any faster just piles up audio work.
+      if (crossed && clock - lastTickAt >= 0.035) {
+        lastTickAt = clock;
         var tilt = flatTilt(st.beta);
         if (phase === 'rattle') soundTick(0.3 + 0.7 * tilt / S.alpha0, 1.4 + 0.6 * (1 - tilt / S.alpha0));
         else if (phase === 'roll') soundTick(0.75, 1 + 0.4 * (1 - tilt / (Math.PI / 2)));
@@ -2198,31 +2241,123 @@
     window.addEventListener('resize', resize);
     resize();
 
+    var perf = { t: 0, n: 0, warm: 2 };
+
     // Open on a slow settle into the resting view.
     camFov = baseFov();
     setScene(state.scene, true);
+    renderer.compile(scene, camera);
 
     var last = performance.now();
+    var rafId = 0, looping = false, glLost = false, lostFor = 0;
+
     function frame(now) {
-      var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+      var real = Math.max(0, (now - last) / 1000);
+      var dt = Math.min(0.05, real);
       last = now;
+      if (glLost) {
+        // The GPU dropped the page's graphics. If they don't come back, start afresh
+        // (the tally is saved).
+        lostFor += real;
+        if (lostFor > 3) location.reload();
+        return;
+      }
       clock += dt;
       updateCoin(dt);
       updateCamera(dt);
-      if (activeWorld === WORLDS.table) updateDust(dt);
       if (activeWorld.update) activeWorld.update(dt);
-      // While the coin spins on its edge: the room dims, the beam brightens and a soft
-      // light from the camera side lets you catch each face as it turns past.
+      // While the coin spins on its edge: the room dims, the beam brightens and the coin
+      // catches more light, so you can read each face as it turns past.
       var tenseNow = phase === 'stand' || phase === 'spin' || phase === 'roll';
       tension += ((tenseNow ? 1 : 0) - tension) * (1 - Math.exp(-2.5 * dt));
       renderer.toneMappingExposure = activeWorld.exposure - 0.14 * tension;
       beam.material.uniforms.uStrength.value = 0.13 + 0.08 * tension;
-      faceLight.intensity = 0.9 * tension;
-      faceLight.position.set(camera.position.x, camera.position.y + 1.5, camera.position.z);
+      headsMesh.material.envMapIntensity = tailsMesh.material.envMapIntensity = 1 + 0.7 * tension;
       renderer.render(scene, camera);
-      requestAnimationFrame(frame);
+      tuneResolution(real);
     }
-    requestAnimationFrame(frame);
+
+    // If frames take longer than 20 ms (under 50 fps), draw fewer pixels. It only ever
+    // steps down, so it never flip-flops between sizes.
+    function tuneResolution(real) {
+      if (perf.warm > 0) {
+        perf.warm -= real;
+        return;
+      }
+      if (real > 0.25) return;   // a one-off hitch, not the device's pace
+      perf.t += real;
+      perf.n += 1;
+      if (perf.t < 2) return;
+      var avg = perf.t / perf.n;
+      perf.t = 0;
+      perf.n = 0;
+      if (avg > 1 / 50 && pixelRatio > 0.75) {
+        pixelRatio = Math.max(0.75, pixelRatio - 0.25);
+        renderer.setPixelRatio(pixelRatio);
+        resize();
+      }
+    }
+
+    function loop(now) {
+      rafId = requestAnimationFrame(loop);   // queue the next frame first, so one error can't freeze the app
+      try {
+        frame(now);
+      } catch (e) {
+        if (window.console) console.error(e);
+      }
+    }
+    function startLoop() {
+      if (looping) return;
+      looping = true;
+      last = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+    function stopLoop() {
+      looping = false;
+      cancelAnimationFrame(rafId);
+    }
+    function quietly(promise) {
+      if (promise && promise.catch) promise.catch(function () {});
+    }
+
+    // Leaving the app mid-toss: stop drawing and silence the sound, then carry on from
+    // the same moment when it comes back.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        stopLoop();
+        if (actx) {
+          setWhoosh(0, 600);
+          quietly(actx.suspend());
+        }
+      } else {
+        if (actx) quietly(actx.resume());
+        perf.warm = 1;
+        startLoop();
+      }
+    });
+    window.addEventListener('pageshow', function () {
+      if (!document.hidden) startLoop();
+    });
+
+    // Android can take the GPU back while the app is in the background.
+    canvas.addEventListener('webglcontextlost', function () {
+      glLost = true;
+      lostFor = 0;
+    });
+    canvas.addEventListener('webglcontextrestored', function () {
+      glLost = false;
+      // Baked reflections lose their pixels with the context, so bake them again.
+      Object.keys(WORLDS).forEach(function (key) {
+        var w = WORLDS[key];
+        if (!w) return;
+        w.env.dispose();
+        w.env = bakeEnv(w.envScene);
+      });
+      scene.environment = activeWorld.env;
+      perf.warm = 1.5;
+    });
+
+    startLoop();
 
     /* ================= Interface ================= */
     var resultEl = $('result'), tossBtn = $('tossBtn'), hintEl = $('hint');

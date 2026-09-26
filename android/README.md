@@ -10,7 +10,7 @@ WebView that serves the page, three.js and its fonts from inside the APK, so it 
 
 ## Install
 
-1. Copy `dist/HeadsOrTails-1.1.apk` to the phone and open it.
+1. Copy `dist/HeadsOrTails-1.2.apk` to the phone and open it.
 2. If Android asks, allow your browser or file manager to install unknown apps.
 3. Play Protect may warn about an app from an unknown developer. Tap **Install anyway**.
 

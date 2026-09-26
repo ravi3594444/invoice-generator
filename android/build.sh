@@ -36,7 +36,10 @@ aapt2 compile --dir res -o "$OUT/res.zip"
 aapt2 link -I "$ANDROID_JAR" --manifest AndroidManifest.xml -A "$OUT/assets" -o "$OUT/unsigned.apk" "$OUT/res.zip"
 
 echo "==> Code"
-javac -source 8 -target 8 -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" $(find src -name '*.java')
+# stubs/ stands in for newer Android classes at compile time; it is not packaged.
+mkdir -p "$OUT/stubs"
+javac -source 8 -target 8 -Xlint:-options -bootclasspath "$ANDROID_JAR" -d "$OUT/stubs" $(find stubs -name '*.java')
+javac -source 8 -target 8 -Xlint:-options -bootclasspath "$ANDROID_JAR" -classpath "$OUT/stubs" -d "$OUT/classes" $(find src -name '*.java')
 dalvik-exchange --dex --min-sdk-version=21 --output="$OUT/dex/classes.dex" "$OUT/classes"
 (cd "$OUT/dex" && zip -q ../unsigned.apk classes.dex)
 
