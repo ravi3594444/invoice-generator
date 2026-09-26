@@ -15,14 +15,14 @@ An agent that can't see the page is guessing. After every UI change, look at the
 
 ## Running the script
 
-The script is at `scripts/browser-check.mjs` inside this skill's base directory (usually `~/.claude/skills/browser-check/`).
+The script is `scripts/browser-check.mjs`, next to this file. `${CLAUDE_SKILL_DIR}` below stands for this skill's folder (usually `~/.claude/skills/browser-check/`); where it isn't filled in, use that folder's path.
 
 ```bash
-node ~/.claude/skills/browser-check/scripts/browser-check.mjs http://localhost:3000 --screenshot /tmp/home.png
-node ~/.claude/skills/browser-check/scripts/browser-check.mjs http://localhost:3000/login \
+node "${CLAUDE_SKILL_DIR}/scripts/browser-check.mjs" http://localhost:3000 --screenshot /tmp/home.png
+node "${CLAUDE_SKILL_DIR}/scripts/browser-check.mjs" http://localhost:3000/login \
   --fill '#email=test@example.com' --fill '#password=secret' --click 'button[type=submit]' \
   --wait-for '[data-testid=dashboard]' --text
-node ~/.claude/skills/browser-check/scripts/browser-check.mjs http://localhost:3000 --mobile --screenshot /tmp/mobile.png
+node "${CLAUDE_SKILL_DIR}/scripts/browser-check.mjs" http://localhost:3000 --mobile --screenshot /tmp/mobile.png
 ```
 
 It prints the status, title, console errors, page errors, and failed requests, and exits `1` on any problem. Run `--help` for every option.

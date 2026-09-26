@@ -25,6 +25,26 @@ The installer also adds a short workflow guide to `~/.claude/CLAUDE.md`, so ever
 
 Skills without a slash in the table are picked up by the agent on its own when they fit. You can still type them (`/tdd`, `/browser-check`, ...).
 
+## Which install do I need?
+
+| Where you use Claude | How to get the skills in every session |
+| --- | --- |
+| Claude app (claude.ai, Claude Desktop) chats | Upload `engineering-workflow.zip` once (below). |
+| Claude Code cloud sessions (claude.ai/code, the app's Code tab, `claude --cloud`) | The same upload: cloud sessions automatically load the skills you turn on at claude.ai. Add the setup-script line too if you also want gstack and the separate slash commands. |
+| Claude Code on your computer | Run the one-line installer, or unzip `agent-kit-skills.zip` into `~/.claude/skills/`. |
+
+Build both ZIP files with `./build-dist.sh`. They land in `agent-kit/dist/`.
+
+## Add to the Claude app (claude.ai and Claude Desktop)
+
+`engineering-workflow.zip` holds every skill in this kit combined into one skill: a main `SKILL.md` that picks the right guide, plus one guide per skill in `reference/`.
+
+1. Use a paid plan (Pro, Max, Team, or Enterprise) and turn on **Code execution and file creation** in Settings → Capabilities.
+2. Go to [**Customize → Skills**](https://claude.ai/customize/skills) and upload `engineering-workflow.zip`.
+3. Turn the skill on.
+
+From then on Claude loads it whenever a request matches, in every chat and in every Claude Code cloud session. In the Claude app, planning, grilling, research, PRDs, and issue drafts work fully; the coding steps need Claude Code or code execution.
+
 ## Install on your computer (once)
 
 Needs `git` and `node`. For gstack, also [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`).
@@ -34,6 +54,8 @@ curl -fsSL https://raw.githubusercontent.com/ravi3594444/invoice-generator/main/
 ```
 
 Everything goes into `~/.claude/`, which Claude Code reads in every project. Restart Claude Code afterwards. Run the same line again any time to update.
+
+Without the installer: unzip `agent-kit-skills.zip` into `~/.claude/skills/` (`unzip agent-kit-skills.zip -d ~/.claude/skills`). You get the skills, but not gstack or the workflow guide in `~/.claude/CLAUDE.md`.
 
 On Windows, run it from Git Bash or WSL.
 
