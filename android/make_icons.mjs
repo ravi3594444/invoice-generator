@@ -20,7 +20,7 @@ function grab(start, end) {
 }
 const drawing =
   grab('    function makeCanvas', '    /* ================= Reflection environment') +
-  grab('    function arcText', '    var faces = {};');
+  grab('    function arcText', '    function makeReeding(mode) {');
 
 const fontPath = process.argv[2] || path.join(here, 'build/assets/fonts/manrope-latin-wght-normal.woff2');
 const fontFace = fs.existsSync(fontPath)

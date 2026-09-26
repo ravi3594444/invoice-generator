@@ -1,8 +1,8 @@
 # Heads or Tails for Android
 
-The coin toss from `../coin-toss/index.html`, packaged as an Android app. It is a
-full-screen WebView that serves the page, three.js and the Manrope font from inside
-the APK, so it works offline.
+The coin toss from `../coin-toss/index.html`, packaged as an Android app: a lamplit table
+or a cricket ground, and a cricket toss coin or an Indian ₹2 coin. It is a full-screen
+WebView that serves the page, three.js and its fonts from inside the APK, so it works offline.
 
 - Android 5.0 or newer (minSdk 21, targetSdk 34)
 - Permissions: internet (required by WebView; the app loads nothing from the web) and
@@ -10,7 +10,7 @@ the APK, so it works offline.
 
 ## Install
 
-1. Copy `dist/HeadsOrTails-1.0.apk` to the phone and open it.
+1. Copy `dist/HeadsOrTails-1.1.apk` to the phone and open it.
 2. If Android asks, allow your browser or file manager to install unknown apps.
 3. Play Protect may warn about an app from an unknown developer. Tap **Install anyway**.
 

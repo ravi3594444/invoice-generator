@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Heads or Tails</title>
-<meta name="description" content="Toss a fully animated 3D cricket toss coin. The camera rides up with it, then it lands heads or tails.">
+<meta name="description" content="Toss a fully animated 3D coin on a lamplit table or a cricket pitch. The camera rides up with it, then it lands heads or tails.">
 <meta name="theme-color" content="#0B1417">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@700&text=%E0%A4%AD%E0%A4%BE%E0%A4%B0%E0%A4%A4%20%E0%A4%B8%E0%A4%A4%E0%A5%8D%E0%A4%AF%E0%A4%AE%E0%A5%87%E0%A4%B5%20%E0%A4%9C%E0%A4%AF%E0%A4%A4%E0%A5%87&display=swap">
 <style>
   :root {
     color-scheme: dark;
@@ -170,6 +171,51 @@
   .hint { margin: 0; font-size: 12px; color: var(--sage); min-height: 1.45em; }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
 
+  /* ---------- Scene and coin picker ---------- */
+  .brand-col { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
+  .look {
+    pointer-events: auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--ink-soft); color: var(--parchment);
+    font: 700 12px/1 Manrope, "Segoe UI", system-ui, sans-serif;
+    padding: 8px 10px 8px 12px; border-radius: 999px; cursor: pointer;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .look svg { width: 12px; height: 12px; flex: none; }
+  .look:disabled { opacity: 0.5; cursor: default; }
+  .panel {
+    position: fixed;
+    z-index: 5;
+    width: min(300px, calc(100vw - 32px));
+    display: grid; gap: 14px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: rgba(11, 20, 23, 0.94);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+  .panel h2 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); }
+  .options { display: grid; gap: 6px; }
+  .opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; text-align: left;
+    border: 1px solid var(--line); background: rgba(241, 231, 208, 0.04); color: var(--parchment);
+    font: 700 14px/1.25 Manrope, "Segoe UI", system-ui, sans-serif;
+    padding: 11px 12px; border-radius: 12px; cursor: pointer;
+  }
+  .opt small { display: block; margin-top: 3px; font-size: 12px; font-weight: 500; color: var(--sage); }
+  .opt::after { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--line); }
+  .opt[aria-pressed="true"] { border-color: rgba(210, 165, 76, 0.7); background: rgba(210, 165, 76, 0.14); }
+  .opt[aria-pressed="true"]::after { background: var(--gold); border-color: var(--gold); }
+
+  /* Daylight at the ground: lighter scrims so the sky stays bright. */
+  body.scene-ground #stage::after {
+    background:
+      linear-gradient(to bottom, rgba(11, 20, 23, 0.55), rgba(11, 20, 23, 0) 18%, rgba(11, 20, 23, 0) 54%, rgba(11, 20, 23, 0.86)),
+      radial-gradient(120% 90% at 50% 50%, rgba(0, 0, 0, 0) 62%, rgba(4, 8, 10, 0.28));
+  }
+  body.scene-ground .hud { text-shadow: 0 1px 10px rgba(5, 12, 16, 0.5); }
+
   .fallback {
     position: fixed; inset: 0; display: grid; place-items: center;
     padding-inline: 24px; text-align: center; background: var(--ink); color: var(--parchment);
@@ -192,12 +238,18 @@
 
   <div class="hud">
     <header class="top">
-      <div class="brand">
-        <span class="mark" aria-hidden="true"></span>
-        <div>
-          <h1>Heads or Tails</h1>
-          <p>Fair 50/50 from your browser's secure random generator</p>
+      <div class="brand-col">
+        <div class="brand">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <h1>Heads or Tails</h1>
+            <p>Fair 50/50 from your browser's secure random generator</p>
+          </div>
         </div>
+        <button class="look" id="lookBtn" type="button" aria-expanded="false" aria-controls="lookPanel">
+          <span id="lookLabel">Table · Cricket coin</span>
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
       <div class="score">
         <div class="tally">
@@ -230,6 +282,23 @@
       </div>
       <p class="hint" id="hint">Tap the table or press Space to toss</p>
     </footer>
+  </div>
+
+  <div class="panel" id="lookPanel" role="dialog" aria-label="Where to toss and which coin" hidden>
+    <section>
+      <h2>Where</h2>
+      <div class="options">
+        <button class="opt" type="button" data-scene="table" aria-pressed="false"><span>Lamplit table<small>Night, a pendant lamp, walnut</small></span></button>
+        <button class="opt" type="button" data-scene="ground" aria-pressed="false"><span>Cricket ground<small>Day match, on the pitch</small></span></button>
+      </div>
+    </section>
+    <section>
+      <h2>Coin</h2>
+      <div class="options">
+        <button class="opt" type="button" data-coin="cricket" aria-pressed="false"><span>Cricket toss coin<small>Silver and gold, bats and stumps</small></span></button>
+        <button class="opt" type="button" data-coin="rupee2" aria-pressed="false"><span>Indian ₹2 coin<small>Steel, Lion Capital and ₹2</small></span></button>
+      </div>
+    </section>
   </div>
 
   <div class="fallback" id="fallback" hidden><p id="fallbackMsg"></p></div>
@@ -268,7 +337,9 @@
       history: Array.isArray(saved.history) ? saved.history.filter(function (f) { return f === 'H' || f === 'T'; }).slice(0, 40) : [],
       call: saved.call === 'H' || saved.call === 'T' ? saved.call : null,
       muted: !!saved.muted,
-      face: saved.face === 'T' ? 'T' : 'H'
+      face: saved.face === 'T' ? 'T' : 'H',
+      scene: saved.scene === 'ground' ? 'ground' : 'table',
+      coin: saved.coin === 'rupee2' ? 'rupee2' : 'cricket'
     };
     function persist() {
       try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
@@ -324,21 +395,26 @@
       ctx.arc(x, y, r, 0, Math.PI * 2);
     }
 
-    /* ================= Reflection environment ================= */
-    (function buildEnvironment() {
-      var env = new T3.Scene();
+    /* ================= Reflection environments ================= */
+    function bakeEnv(envScene) {
+      var pmrem = new T3.PMREMGenerator(renderer);
+      var tex = pmrem.fromScene(envScene, 0.035).texture;
+      pmrem.dispose();
+      return tex;
+    }
+    function gradientSphere(stops) {
       var c = makeCanvas(8, 256), g = c.getContext('2d');
       var grd = g.createLinearGradient(0, 0, 0, 256);
-      grd.addColorStop(0, '#fff4e0');
-      grd.addColorStop(0.22, '#d2a263');
-      grd.addColorStop(0.42, '#5b503e');
-      grd.addColorStop(0.58, '#1d2a2b');
-      grd.addColorStop(1, '#2c1d12');
+      stops.forEach(function (s) { grd.addColorStop(s[0], s[1]); });
       g.fillStyle = grd;
       g.fillRect(0, 0, 8, 256);
       var tex = new T3.CanvasTexture(c);
       tex.encoding = T3.sRGBEncoding;
-      env.add(new T3.Mesh(new T3.SphereGeometry(10, 32, 16), new T3.MeshBasicMaterial({ map: tex, side: T3.BackSide })));
+      return new T3.Mesh(new T3.SphereGeometry(10, 32, 16), new T3.MeshBasicMaterial({ map: tex, side: T3.BackSide }));
+    }
+    var tableEnv = (function () {
+      var env = new T3.Scene();
+      env.add(gradientSphere([[0, '#fff4e0'], [0.22, '#d2a263'], [0.42, '#5b503e'], [0.58, '#1d2a2b'], [1, '#2c1d12']]));
       var lampDisk = new T3.Mesh(new T3.CircleGeometry(2.6, 32), new T3.MeshBasicMaterial({ color: new T3.Color(7, 5.6, 3.8) }));
       lampDisk.position.set(0, 9, 0);
       lampDisk.rotation.x = Math.PI / 2;
@@ -352,10 +428,9 @@
         p.lookAt(0, 0, 0);
         env.add(p);
       }
-      var pmrem = new T3.PMREMGenerator(renderer);
-      scene.environment = pmrem.fromScene(env, 0.035).texture;
-      pmrem.dispose();
+      return bakeEnv(env);
     })();
+    scene.environment = tableEnv;
 
     /* ================= Coin ================= */
     var R = 1;            // coin radius (1 unit = 12 mm)
@@ -662,32 +737,312 @@
       ctx.restore();
     }
 
-    var faces = {};
-    ['H', 'T'].forEach(function (side) {
-      var colorCanvas = makeCanvas(1024, 1024);
-      var bumpCanvas = makeCanvas(1024, 1024);
-      var map = new T3.CanvasTexture(colorCanvas);
-      map.encoding = T3.sRGBEncoding;
-      map.anisotropy = maxAniso;
-      var bump = new T3.CanvasTexture(bumpCanvas);
-      bump.anisotropy = maxAniso;
-      faces[side] = {
-        colorCanvas: colorCanvas, bumpCanvas: bumpCanvas, map: map, bump: bump,
-        material: new T3.MeshStandardMaterial({ map: map, bumpMap: bump, bumpScale: 0.022, metalness: 1, roughness: 0.3 })
-      };
-    });
-    function paintFaces() {
-      ['H', 'T'].forEach(function (side) {
-        var f = faces[side];
-        drawFace(f.colorCanvas.getContext('2d'), side, 'color');
-        drawFace(f.bumpCanvas.getContext('2d'), side, 'bump');
-        f.map.needsUpdate = true;
-        f.bump.needsUpdate = true;
-      });
+    // Splits text into the letters a reader sees, so Devanagari syllables stay whole.
+    function clusters(text) {
+      if (window.Intl && Intl.Segmenter) {
+        return Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text), function (s) { return s.segment; });
+      }
+      return /[ऀ-ॿ]/.test(text) ? [text] : Array.from(text);
     }
-    paintFaces();
-    if (document.fonts && document.fonts.load) {
-      document.fonts.load('800 64px Manrope').then(paintFaces).catch(function () {});
+
+    // Text running clockwise around a circle, letter tops toward the rim.
+    function arcTextAround(ctx, text, cx, cy, radius, centerAngle, font, spacing) {
+      ctx.save();
+      ctx.font = font;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var parts = clusters(text);
+      var widths = parts.map(function (p) { return ctx.measureText(p).width; });
+      var total = widths.reduce(function (a, b) { return a + b; }, 0) + spacing * (parts.length - 1);
+      var run = -total / 2;
+      parts.forEach(function (p, i) {
+        var mid = run + widths[i] / 2;
+        run += widths[i] + spacing;
+        var a = centerAngle + mid / radius;
+        ctx.save();
+        ctx.translate(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.fillText(p, 0, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    // The Lion Capital of Ashoka, simplified for a coin: three lions on an abacus
+    // carrying the Dharma Chakra, a galloping horse and a bull.
+    function drawLionCapital(ctx, x, y, k, C) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(k, k);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      function solid(fill, w) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+        groove(ctx, C, w);
+      }
+      function cut(w) {
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = C.engrave;
+        ctx.lineWidth = w;
+        ctx.stroke();
+        ctx.restore();
+      }
+      // A mane: a blob fringed with tufts, with flame-like strands inside.
+      function mane(cx, cy, rx, ry, tufts) {
+        ctx.beginPath();
+        for (var i = 0; i <= tufts; i++) {
+          var a = (i / tufts) * Math.PI * 2, am = ((i - 0.5) / tufts) * Math.PI * 2;
+          var px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.quadraticCurveTo(cx + Math.cos(am) * rx * 1.18, cy + Math.sin(am) * ry * 1.18, px, py);
+        }
+        ctx.closePath();
+        solid(C.raised, 3);
+        for (var j = 0; j < tufts; j++) {
+          var b = ((j + 0.5) / tufts) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(b) * rx * 0.55, cy + Math.sin(b) * ry * 0.55);
+          ctx.quadraticCurveTo(cx + Math.cos(b + 0.12) * rx * 0.8, cy + Math.sin(b + 0.12) * ry * 0.8,
+            cx + Math.cos(b) * rx * 0.98, cy + Math.sin(b) * ry * 0.98);
+          cut(2.2);
+        }
+      }
+      // A side lion facing left; drawn mirrored for the one facing right.
+      function sideLion() {
+        ctx.beginPath(); ctx.ellipse(-86, -4, 40, 46, 0, 0, Math.PI * 2); solid(C.raised, 3);
+        roundRectPath(ctx, -120, -2, 24, 44, 10); solid(C.raised, 3);
+        ctx.beginPath(); ctx.ellipse(-112, 40, 16, 6, 0, 0, Math.PI * 2); solid(C.raised, 2.5);
+        mane(-84, -84, 48, 56, 13);
+        ctx.beginPath();
+        ctx.moveTo(-100, -120);
+        ctx.quadraticCurveTo(-128, -124, -140, -104);
+        ctx.lineTo(-152, -94);
+        ctx.quadraticCurveTo(-156, -84, -147, -80);
+        ctx.lineTo(-131, -79);
+        ctx.lineTo(-146, -70);
+        ctx.quadraticCurveTo(-140, -58, -118, -60);
+        ctx.quadraticCurveTo(-98, -68, -96, -96);
+        ctx.closePath();
+        solid(C.plate, 3);
+        ctx.beginPath(); ctx.arc(-124, -101, 4, 0, Math.PI * 2); ctx.fillStyle = C.engrave; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-146, -90); ctx.quadraticCurveTo(-140, -88, -136, -92); cut(2);
+      }
+
+      // The abacus and the slab the lions stand on.
+      roundRectPath(ctx, -140, 58, 280, 58, 6); solid(C.raised, 3);
+      roundRectPath(ctx, -152, 42, 304, 16, 5); solid(C.raised, 3);
+      // Dharma Chakra with 24 spokes, and small wheels at the ends.
+      ctx.beginPath(); ctx.arc(0, 87, 22, 0, Math.PI * 2); solid(C.plate, 3);
+      ctx.beginPath(); ctx.arc(0, 87, 17, 0, Math.PI * 2); cut(2);
+      for (var s = 0; s < 24; s++) {
+        var sa = (s / 24) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(sa) * 5, 87 + Math.sin(sa) * 5);
+        ctx.lineTo(Math.cos(sa) * 17, 87 + Math.sin(sa) * 17);
+        cut(1.6);
+      }
+      ctx.beginPath(); ctx.arc(0, 87, 4.5, 0, Math.PI * 2); ctx.fillStyle = C.engrave; ctx.fill();
+      [-1, 1].forEach(function (side) {
+        ctx.beginPath(); ctx.arc(side * 121, 87, 12, 0, Math.PI * 2); cut(2.2);
+        for (var w = 0; w < 8; w++) {
+          var wa = (w / 8) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(side * 121, 87);
+          ctx.lineTo(side * 121 + Math.cos(wa) * 12, 87 + Math.sin(wa) * 12);
+          cut(1.4);
+        }
+      });
+      // A galloping horse on the left and a bull on the right, cut into the abacus.
+      ctx.save();
+      ctx.fillStyle = C.engrave;
+      ctx.strokeStyle = C.engrave;
+      ctx.shadowColor = 'transparent';
+      ctx.lineWidth = 3.4;
+      ctx.beginPath(); ctx.ellipse(-60, 86, 21, 8, -0.08, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-76, 84); ctx.quadraticCurveTo(-84, 74, -90, 70); ctx.lineTo(-96, 74); ctx.lineTo(-88, 80);
+      ctx.quadraticCurveTo(-82, 86, -72, 90); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-74, 90); ctx.lineTo(-86, 100); ctx.moveTo(-70, 92); ctx.lineTo(-76, 106);
+      ctx.moveTo(-48, 91); ctx.lineTo(-40, 105); ctx.moveTo(-44, 90); ctx.lineTo(-34, 100);
+      ctx.moveTo(-40, 83); ctx.quadraticCurveTo(-32, 84, -28, 92);
+      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(60, 88, 22, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(50, 78, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(84, 92, 8, 6, 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(84, 86); ctx.lineTo(90, 79);
+      ctx.moveTo(44, 95); ctx.lineTo(42, 108); ctx.moveTo(52, 96); ctx.lineTo(52, 108);
+      ctx.moveTo(70, 96); ctx.lineTo(70, 108); ctx.moveTo(77, 95); ctx.lineTo(80, 107);
+      ctx.moveTo(38, 86); ctx.quadraticCurveTo(33, 92, 35, 101);
+      ctx.stroke();
+      ctx.restore();
+
+      // The side lions, then the front lion over them.
+      sideLion();
+      ctx.save();
+      ctx.scale(-1, 1);
+      sideLion();
+      ctx.restore();
+      ctx.beginPath(); ctx.ellipse(0, -14, 50, 44, 0, 0, Math.PI * 2); solid(C.raised, 3);
+      [-1, 1].forEach(function (side) {
+        roundRectPath(ctx, side * 26 - 12, -12, 24, 54, 10); solid(C.raised, 3);
+        ctx.beginPath(); ctx.ellipse(side * 26, 40, 16, 6, 0, 0, Math.PI * 2); solid(C.raised, 2.5);
+      });
+      mane(0, -90, 64, 66, 16);
+      ctx.beginPath(); ctx.ellipse(0, -86, 34, 42, 0, 0, Math.PI * 2); solid(C.plate, 3);
+      [-1, 1].forEach(function (side) {
+        ctx.beginPath(); ctx.moveTo(side * 24, -108); ctx.quadraticCurveTo(side * 13, -115, side * 4, -106); cut(2.6);
+        ctx.beginPath(); ctx.arc(side * 13, -99, 4, 0, Math.PI * 2); ctx.fillStyle = C.engrave; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(side * 5, -100); ctx.lineTo(side * 7, -78); cut(2.2);
+      });
+      ctx.beginPath(); ctx.ellipse(0, -72, 13, 8, 0, 0, Math.PI * 2); solid(C.raised, 2.4);
+      ctx.beginPath(); ctx.moveTo(-18, -60); ctx.quadraticCurveTo(0, -48, 18, -60); cut(3);
+      ctx.beginPath(); ctx.moveTo(0, -64); ctx.lineTo(0, -56); cut(2.2);
+      ctx.restore();
+    }
+
+    // The ₹ sign, drawn as strokes so it looks the same on every device.
+    function drawRupeeSign(ctx, x, y, h, C) {
+      var w = h * 0.72, lw = h * 0.11;
+      ctx.save();
+      ctx.translate(x - w / 2, y - h / 2);
+      ctx.strokeStyle = C.raised;
+      ctx.lineWidth = lw;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.moveTo(0, lw / 2); ctx.lineTo(w, lw / 2);
+      ctx.moveTo(0, h * 0.28); ctx.lineTo(w, h * 0.28);
+      ctx.moveTo(w * 0.1, lw / 2);
+      ctx.bezierCurveTo(w * 0.98, lw / 2, w * 0.98, h * 0.54, w * 0.1, h * 0.54);
+      ctx.lineTo(w * 0.86, h);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // An ear of grain curving up beside the numeral.
+    function drawGrain(ctx, c, k, C, side) {
+      var R0 = 292 * k;
+      var a1 = Math.PI / 2 - side * 0.3;
+      var a2 = Math.PI / 2 - side * 1.95;
+      var fwd = a2 > a1 ? 1 : -1;
+      ctx.save();
+      ctx.translate(c, c);
+      ctx.strokeStyle = C.raised;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 6 * k;
+      ctx.beginPath();
+      ctx.arc(0, 0, R0, a1, a2, fwd < 0);
+      ctx.stroke();
+      ctx.fillStyle = C.raised;
+      var n = 12;
+      for (var i = 0; i < n; i++) {
+        var t = 0.28 + 0.72 * (i / (n - 1));
+        var a = a1 + (a2 - a1) * t;
+        var heading = Math.atan2(Math.cos(a) * fwd, -Math.sin(a) * fwd);
+        var size = 1 - 0.3 * (i / (n - 1));
+        [1, -1].forEach(function (s) {
+          ctx.save();
+          ctx.translate(Math.cos(a) * (R0 + s * 8 * k), Math.sin(a) * (R0 + s * 8 * k));
+          ctx.rotate(heading + s * side * 0.55);
+          ctx.beginPath();
+          ctx.ellipse(13 * k * size, 0, 16 * k * size, 7 * k * size, 0, 0, Math.PI * 2);
+          ctx.fill();
+          groove(ctx, C, 2.2 * k);
+          ctx.strokeStyle = C.raised;
+          ctx.lineWidth = 2 * k;
+          ctx.beginPath();
+          ctx.moveTo(28 * k * size, 0);
+          ctx.lineTo(48 * k * size, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.translate(Math.cos(a2) * R0, Math.sin(a2) * R0);
+      ctx.rotate(Math.atan2(Math.cos(a2) * fwd, -Math.sin(a2) * fwd));
+      ctx.beginPath();
+      ctx.ellipse(10 * k, 0, 15 * k, 6.5 * k, 0, 0, Math.PI * 2);
+      ctx.fill();
+      groove(ctx, C, 2.2 * k);
+      ctx.restore();
+    }
+
+    // The Indian ₹2 coin in the style of the current steel series: the Lion Capital with
+    // सत्यमेव जयते, भारत and INDIA on the obverse; ₹ and 2 among ears of grain on the reverse.
+    function drawRupeeFace(ctx, side, mode) {
+      var S = ctx.canvas.width, c = S / 2, k = S / 1024;
+      var color = mode === 'color';
+      var C = color
+        ? { raised: '#eef0f1', plate: '#dde0e2', engrave: '#6b7278' }
+        : { raised: '#ffffff', plate: '#e0e0e0', engrave: '#7a7a7a' };
+      var RIM = 468 * k;
+      ctx.save();
+      ctx.clearRect(0, 0, S, S);
+      if (color) {
+        var rg = ctx.createRadialGradient(c, c, 430 * k, c, c, 512 * k);
+        rg.addColorStop(0, '#99a0a5');
+        rg.addColorStop(0.55, '#f0f2f3');
+        rg.addColorStop(1, '#8a9196');
+        ctx.fillStyle = rg;
+      } else {
+        ctx.fillStyle = '#f4f4f4';
+      }
+      ctx.fillRect(0, 0, S, S);
+      if (color) {
+        var fg = ctx.createRadialGradient(c - 140 * k, c - 170 * k, 40 * k, c, c, RIM);
+        fg.addColorStop(0, '#d2d6d9');
+        fg.addColorStop(1, '#8c9398');
+        ctx.fillStyle = fg;
+      } else {
+        ctx.fillStyle = '#6a6a6a';
+      }
+      circlePath(ctx, c, c, RIM);
+      ctx.fill();
+      for (var i = 0; i < 7000; i++) {
+        var a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * (RIM - 4 * k);
+        ctx.fillStyle = 'rgba(' + (color || rnd() < 0.5 ? '255,255,255' : '0,0,0') + ',' + (rnd() * 0.08).toFixed(3) + ')';
+        ctx.fillRect(c + Math.cos(a) * r, c + Math.sin(a) * r, 2 * k, 2 * k);
+      }
+      if (color) {
+        ctx.shadowColor = 'rgba(30,34,38,0.5)';
+        ctx.shadowBlur = 5 * k;
+        ctx.shadowOffsetY = 3 * k;
+      }
+      ctx.strokeStyle = C.raised;
+      ctx.lineWidth = 5 * k;
+      circlePath(ctx, c, c, 450 * k);
+      ctx.stroke();
+
+      var sans = 'Manrope, "Segoe UI", system-ui, sans-serif';
+      var deva = '"Noto Sans Devanagari", "Nirmala UI", "Kohinoor Devanagari", Mangal, sans-serif';
+      ctx.fillStyle = C.raised;
+      if (side === 'H') {
+        drawLionCapital(ctx, c, c - 60 * k, 1.3 * k, C);
+        ctx.fillStyle = C.raised;
+        ctx.font = '700 ' + 48 * k + 'px ' + deva;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('सत्यमेव जयते', c, c + 152 * k);
+        arcTextAround(ctx, 'भारत', c, c, 396 * k, Math.PI, '700 ' + 64 * k + 'px ' + deva, 0);
+        arcTextAround(ctx, 'INDIA', c, c, 396 * k, 0, '800 ' + 60 * k + 'px ' + sans, 14 * k);
+      } else {
+        drawRupeeSign(ctx, c, c - 186 * k, 116 * k, C);
+        ctx.fillStyle = C.raised;
+        ctx.font = '800 ' + 330 * k + 'px ' + sans;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('2', c, c + 150 * k);
+        drawGrain(ctx, c, k, C, -1);
+        drawGrain(ctx, c, k, C, 1);
+        ctx.fillStyle = C.raised;
+        ctx.font = '700 ' + 44 * k + 'px ' + sans;
+        ctx.textBaseline = 'middle';
+        ctx.fillText('2024', c, c + 232 * k);
+      }
+      ctx.restore();
     }
 
     function makeReeding(mode) {
@@ -704,24 +1059,87 @@
       if (mode === 'color') t.encoding = T3.sRGBEncoding;
       return t;
     }
-    var edgeMat = new T3.MeshStandardMaterial({
-      map: makeReeding('color'), bumpMap: makeReeding('bump'), bumpScale: 0.015, metalness: 1, roughness: 0.36
-    });
+
+    // Each coin design gets its own face textures and edge, made the first time it is used.
+    var COIN_TYPES = {
+      cricket: {
+        label: 'Cricket coin', draw: drawFace, roughness: 0.3, bumpScale: 0.022,
+        sides: { H: 'Crossed bats side up', T: 'Stumps side up' },
+        edge: function () {
+          return new T3.MeshStandardMaterial({ map: makeReeding('color'), bumpMap: makeReeding('bump'), bumpScale: 0.015, metalness: 1, roughness: 0.36 });
+        }
+      },
+      rupee2: {
+        label: '₹2 coin', draw: drawRupeeFace, roughness: 0.4, bumpScale: 0.026,
+        sides: { H: 'Lion Capital side up', T: '₹2 side up' },
+        edge: function () {
+          return new T3.MeshStandardMaterial({ color: 0xc9cdd1, metalness: 1, roughness: 0.32 });
+        }
+      }
+    };
+    var coinSets = {};
+    function paintSet(type) {
+      var set = coinSets[type], draw = COIN_TYPES[type].draw;
+      ['H', 'T'].forEach(function (side) {
+        var f = set.faces[side];
+        draw(f.colorCanvas.getContext('2d'), side, 'color');
+        draw(f.bumpCanvas.getContext('2d'), side, 'bump');
+        f.map.needsUpdate = true;
+        f.bump.needsUpdate = true;
+      });
+    }
+    function coinSet(type) {
+      if (coinSets[type]) return coinSets[type];
+      var spec = COIN_TYPES[type], set = { faces: {}, edge: spec.edge() };
+      ['H', 'T'].forEach(function (side) {
+        var colorCanvas = makeCanvas(1024, 1024), bumpCanvas = makeCanvas(1024, 1024);
+        var map = new T3.CanvasTexture(colorCanvas);
+        map.encoding = T3.sRGBEncoding;
+        map.anisotropy = maxAniso;
+        var bump = new T3.CanvasTexture(bumpCanvas);
+        bump.anisotropy = maxAniso;
+        set.faces[side] = {
+          colorCanvas: colorCanvas, bumpCanvas: bumpCanvas, map: map, bump: bump,
+          material: new T3.MeshStandardMaterial({ map: map, bumpMap: bump, bumpScale: spec.bumpScale, metalness: 1, roughness: spec.roughness })
+        };
+      });
+      coinSets[type] = set;
+      paintSet(type);
+      return set;
+    }
+    function repaintCoins() {
+      Object.keys(coinSets).forEach(paintSet);
+    }
+    if (document.fonts && document.fonts.load) {
+      Promise.all([
+        document.fonts.load('800 64px Manrope'),
+        document.fonts.load('700 64px "Noto Sans Devanagari"', 'भारत')
+      ]).then(repaintCoins, repaintCoins);
+    }
 
     var coin = new T3.Group();
-    var edgeMesh = new T3.Mesh(new T3.CylinderGeometry(R, R, TH, 128, 1, true), edgeMat);
-    var headsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128), faces.H.material);
+    var edgeMesh = new T3.Mesh(new T3.CylinderGeometry(R, R, TH, 128, 1, true));
+    var headsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128));
     headsMesh.rotation.x = -Math.PI / 2;
     headsMesh.position.y = TH / 2;
-    var tailsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128), faces.T.material);
+    var tailsMesh = new T3.Mesh(new T3.CircleGeometry(R, 128));
     tailsMesh.rotation.x = Math.PI / 2;
     tailsMesh.position.y = -TH / 2;
     [edgeMesh, headsMesh, tailsMesh].forEach(function (m) { m.castShadow = true; coin.add(m); });
     scene.add(coin);
+    function applyCoin(type) {
+      var set = coinSet(type);
+      headsMesh.material = set.faces.H.material;
+      tailsMesh.material = set.faces.T.material;
+      edgeMesh.material = set.edge;
+    }
+    applyCoin(state.coin);
 
     /* ================= Table, lamp, atmosphere ================= */
     var TABLE_R = 24;
     var LAMP_Y = 58;
+    var tableWorld = new T3.Group();
+    scene.add(tableWorld);
 
     function makeWood() {
       var S = 1024, c = makeCanvas(S, S), g = c.getContext('2d');
@@ -766,13 +1184,13 @@
     );
     tableTop.rotation.x = -Math.PI / 2;
     tableTop.receiveShadow = true;
-    scene.add(tableTop);
+    tableWorld.add(tableTop);
     var tableEdge = new T3.Mesh(
       new T3.CylinderGeometry(TABLE_R, TABLE_R - 0.5, 2.2, 128, 1, true),
       new T3.MeshStandardMaterial({ color: 0x22150c, roughness: 0.6 })
     );
     tableEdge.position.y = -1.1;
-    scene.add(tableEdge);
+    tableWorld.add(tableEdge);
 
     var spot = new T3.SpotLight(0xffd6a0, 2.3, 0, 0.39, 0.6, 1);
     spot.position.set(0, LAMP_Y - 1, 0);
@@ -782,11 +1200,11 @@
     spot.shadow.camera.near = 18;
     spot.shadow.camera.far = 70;
     spot.shadow.bias = -0.0004;
-    scene.add(spot, spot.target);
-    scene.add(new T3.HemisphereLight(0x456a74, 0x1a0f08, 0.45));
+    tableWorld.add(spot, spot.target);
+    tableWorld.add(new T3.HemisphereLight(0x456a74, 0x1a0f08, 0.45));
     var rim = new T3.DirectionalLight(0x9fc4d6, 0.7);
     rim.position.set(-6, 14, -14);
-    scene.add(rim);
+    tableWorld.add(rim);
     var faceLight = new T3.PointLight(0xfff2dd, 0, 30, 2);
     scene.add(faceLight);
 
@@ -820,7 +1238,7 @@
     halo.scale.set(12, 12, 1);
     halo.position.y = -1.4;
     lamp.add(halo);
-    scene.add(lamp);
+    tableWorld.add(lamp);
 
     // Visible beam of light from the lamp to the table.
     var coneH = LAMP_Y - 1, coneR = TABLE_R - 2;
@@ -852,7 +1270,7 @@
       })
     );
     beam.position.y = coneH / 2;
-    scene.add(beam);
+    tableWorld.add(beam);
 
     // Dust motes: they stream past as the camera rides up with the coin.
     var DUST = reduceMotion ? 260 : 800;
@@ -878,7 +1296,7 @@
     var dust = new T3.Points(dustGeo, new T3.PointsMaterial({
       size: 0.07, map: glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: T3.AdditiveBlending, sizeAttenuation: true
     }));
-    scene.add(dust);
+    tableWorld.add(dust);
 
     // Far-off room lights, out of focus.
     for (var bk = 0; bk < 34; bk++) {
@@ -892,7 +1310,428 @@
       var bs = 3 + rnd() * 8;
       bokeh.scale.set(bs, bs, 1);
       bokeh.position.set(Math.cos(ba) * brad, -15 + rnd() * 80, Math.sin(ba) * brad);
-      scene.add(bokeh);
+      tableWorld.add(bokeh);
+    }
+
+    /* ================= Cricket ground, daytime ================= */
+    // Built to real measurements, in coin units: 1 m = 83.3 units.
+    var M = 1 / 0.012;
+
+    // Draws something at every tile offset so a texture repeats without seams.
+    function wrap9(S, fn) {
+      for (var dx = -S; dx <= S; dx += S) for (var dy = -S; dy <= S; dy += S) fn(dx, dy);
+    }
+
+    // Close-up detail for the pitch: dry, rolled clay, dead grass and hairline cracks.
+    function makePitchDetail() {
+      var S = 512, c = makeCanvas(S, S), g = c.getContext('2d');
+      g.fillStyle = '#b39a6a';
+      g.fillRect(0, 0, S, S);
+      for (var i = 0; i < 90; i++) {
+        var x = rnd() * S, y = rnd() * S, r = 20 + rnd() * 70;
+        var tone = rnd() < 0.5 ? '170,144,96' : '220,202,158';
+        var a = (0.18 + rnd() * 0.22).toFixed(2);
+        wrap9(S, function (dx, dy) {
+          var grd = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+          grd.addColorStop(0, 'rgba(' + tone + ',' + a + ')');
+          grd.addColorStop(1, 'rgba(' + tone + ',0)');
+          g.fillStyle = grd;
+          g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+        });
+      }
+      for (var j = 0; j < 42000; j++) {
+        var v = rnd();
+        g.fillStyle = v < 0.45 ? 'rgba(120,96,58,0.35)' : v < 0.9 ? 'rgba(236,222,186,0.3)' : 'rgba(90,86,80,0.35)';
+        g.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 1.5, 1 + rnd() * 1.5);
+      }
+      g.lineCap = 'round';
+      g.lineWidth = 1;
+      for (var q = 0; q < 900; q++) {
+        var gx = rnd() * S, gy = rnd() * S, ga = rnd() * Math.PI, gl = 3 + rnd() * 6;
+        g.strokeStyle = rnd() < 0.5 ? 'rgba(142,150,74,0.4)' : 'rgba(176,160,96,0.4)';
+        g.beginPath();
+        g.moveTo(gx, gy);
+        g.lineTo(gx + Math.cos(ga) * gl, gy + Math.sin(ga) * gl);
+        g.stroke();
+      }
+      for (var n = 0; n < 9; n++) {
+        var pts = [[rnd() * S, rnd() * S]], ang = rnd() * Math.PI * 2;
+        for (var st = 0; st < 10; st++) {
+          ang += (rnd() - 0.5) * 1.2;
+          var last = pts[pts.length - 1];
+          pts.push([last[0] + Math.cos(ang) * (8 + rnd() * 14), last[1] + Math.sin(ang) * (8 + rnd() * 14)]);
+        }
+        g.strokeStyle = 'rgba(104,82,50,0.45)';
+        g.lineWidth = 1 + rnd() * 0.8;
+        wrap9(S, function (dx, dy) {
+          g.beginPath();
+          pts.forEach(function (p, m) { if (m) g.lineTo(p[0] + dx, p[1] + dy); else g.moveTo(p[0] + dx, p[1] + dy); });
+          g.stroke();
+        });
+      }
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      t.wrapS = t.wrapT = T3.RepeatWrapping;
+      t.anisotropy = maxAniso;
+      return t;
+    }
+
+    // The outfield: mowing stripes, the square, and the fielding circle.
+    function makeOutfield(radius, stumpsZ) {
+      var S = 2048, c = makeCanvas(S, S), g = c.getContext('2d');
+      var px = S / (radius * 2), cx = S / 2, cy = S / 2;
+      g.fillStyle = '#5c9a40';
+      g.fillRect(0, 0, S, S);
+      var band = 4.5 * M * px;
+      for (var i = 0, x = cx - band / 2 - band * 20; x < S; x += band, i++) {
+        g.fillStyle = i % 2 ? 'rgba(236,255,200,0.08)' : 'rgba(18,54,12,0.08)';
+        g.fillRect(x, 0, band, S);
+      }
+      for (var j = 0; j < 70000; j++) {
+        g.fillStyle = rnd() < 0.5 ? 'rgba(28,66,18,0.2)' : 'rgba(176,214,122,0.14)';
+        g.fillRect(rnd() * S, rnd() * S, 2, 2);
+      }
+      g.fillStyle = 'rgba(206,222,150,0.16)';
+      g.fillRect(cx - 12 * M * px, cy - 16 * M * px, 24 * M * px, 32 * M * px);
+      // Two 30-yard arcs around the stumps, joined by straight lines.
+      var rr = 27.43 * M * px, sz = stumpsZ * px;
+      g.strokeStyle = 'rgba(255,255,255,0.8)';
+      g.lineWidth = 2.5;
+      g.setLineDash([1.1 * M * px, 0.9 * M * px]);
+      g.beginPath();
+      g.arc(cx, cy - sz, rr, Math.PI, 0);
+      g.lineTo(cx + rr, cy + sz);
+      g.arc(cx, cy + sz, rr, 0, Math.PI);
+      g.closePath();
+      g.stroke();
+      g.setLineDash([]);
+      var edge = g.createRadialGradient(cx, cy, (radius - 7 * M) * px, cx, cy, radius * px);
+      edge.addColorStop(0, 'rgba(126,112,70,0)');
+      edge.addColorStop(1, 'rgba(126,112,70,0.4)');
+      g.fillStyle = edge;
+      g.fillRect(0, 0, S, S);
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      t.anisotropy = maxAniso;
+      return t;
+    }
+
+    // A packed crowd, mostly in blue, row after row, with aisles.
+    function makeCrowd(shaded) {
+      var W = 1024, H = 512, c = makeCanvas(W, H), g = c.getContext('2d');
+      g.fillStyle = '#566072';
+      g.fillRect(0, 0, W, H);
+      var rows = 28, rowH = H / rows;
+      var shirts = ['#1f5fd0', '#2d74e8', '#1a4fb8', '#3b82f6', '#f28c28', '#f5f5f0', '#ffd23f', '#1f8a4c', '#d7263d', '#2b2b2b'];
+      var skin = ['#8d5a3b', '#a8714a', '#c68c5e', '#6e4630'];
+      for (var r = 0; r < rows; r++) {
+        var y = r * rowH;
+        g.fillStyle = 'rgba(0,0,0,0.28)';
+        g.fillRect(0, y + rowH - 3, W, 3);
+        for (var x = 2; x < W - 6; x += 7 + rnd() * 3) {
+          if (x % 128 < 12 || rnd() < 0.1) continue;
+          g.fillStyle = shirts[(rnd() * shirts.length) | 0];
+          g.fillRect(x, y + 5, 6, rowH - 8);
+          g.fillStyle = skin[(rnd() * skin.length) | 0];
+          g.fillRect(x + 1, y + 1.5, 4, 4);
+        }
+      }
+      g.fillStyle = 'rgba(214,220,226,0.4)';
+      for (var a = 0; a < W; a += 128) g.fillRect(a + 2, 0, 8, H);
+      if (shaded) {
+        var sh = g.createLinearGradient(0, 0, 0, H);
+        sh.addColorStop(0, 'rgba(10,16,24,0.55)');
+        sh.addColorStop(1, 'rgba(10,16,24,0.15)');
+        g.fillStyle = sh;
+        g.fillRect(0, 0, W, H);
+      }
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      t.wrapS = T3.RepeatWrapping;
+      t.repeat.set(40, 1);
+      t.anisotropy = maxAniso;
+      return t;
+    }
+
+    // Boundary boards: coloured LED panels, no lettering.
+    function makeBoards() {
+      var c = makeCanvas(1024, 32), g = c.getContext('2d');
+      var cols = [['#1f3f95', '#2b58c4'], ['#0e8a86', '#19b3ad'], ['#f0b429', '#ffd35c'], ['#e8edf2', '#ffffff'],
+        ['#c2372f', '#e4574e'], ['#6a2fa1', '#8d4fd0'], ['#1f3f95', '#2b58c4'], ['#0e8a86', '#19b3ad']];
+      g.fillStyle = '#0d1116';
+      g.fillRect(0, 0, 1024, 32);
+      cols.forEach(function (p, i) {
+        var grd = g.createLinearGradient(0, 0, 0, 32);
+        grd.addColorStop(0, p[1]);
+        grd.addColorStop(1, p[0]);
+        g.fillStyle = grd;
+        g.fillRect(i * 128 + 3, 3, 122, 26);
+        g.fillStyle = 'rgba(255,255,255,0.18)';
+        g.fillRect(i * 128 + 14, 12, 60 + (i * 13) % 40, 6);
+      });
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      t.wrapS = T3.RepeatWrapping;
+      t.repeat.set(18, 1);
+      return t;
+    }
+
+    function makeCloud() {
+      var c = makeCanvas(256, 128), g = c.getContext('2d');
+      for (var i = 0; i < 30; i++) {
+        var x = 58 + rnd() * 140;
+        var hump = Math.sin(((x - 58) / 140) * Math.PI);
+        var r = 16 + rnd() * 26 * hump + 8;
+        var y = Math.min(122 - r, 84 - hump * 30 + rnd() * 14);
+        var grd = g.createRadialGradient(x, y, 0, x, y, r);
+        grd.addColorStop(0, 'rgba(255,255,255,0.95)');
+        grd.addColorStop(0.55, 'rgba(255,255,255,0.55)');
+        grd.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = grd;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      g.globalCompositeOperation = 'source-atop';
+      var under = g.createLinearGradient(0, 60, 0, 128);
+      under.addColorStop(0, 'rgba(196,212,230,0)');
+      under.addColorStop(1, 'rgba(176,194,216,0.55)');
+      g.fillStyle = under;
+      g.fillRect(0, 0, 256, 128);
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      return t;
+    }
+
+    function makeLampGrid() {
+      var c = makeCanvas(128, 80), g = c.getContext('2d');
+      g.fillStyle = '#2a3036';
+      g.fillRect(0, 0, 128, 80);
+      for (var y = 6; y < 76; y += 12) {
+        for (var x = 6; x < 124; x += 12) {
+          var grd = g.createRadialGradient(x + 4, y + 4, 0, x + 4, y + 4, 5);
+          grd.addColorStop(0, '#f4f6f8');
+          grd.addColorStop(1, '#9aa3ab');
+          g.fillStyle = grd;
+          g.fillRect(x, y, 8, 8);
+        }
+      }
+      var t = new T3.CanvasTexture(c);
+      t.encoding = T3.sRGBEncoding;
+      return t;
+    }
+
+    function buildGround() {
+      var group = new T3.Group();
+      var SUN = new T3.Vector3(0.42, 0.74, 0.52).normalize();   // high, behind the camera
+      var FIELD_R = 72 * M, STUMPS_Z = 10.06 * M, PITCH_W = 3.6 * M, PITCH_L = 25 * M;
+
+      // Sky: deep blue overhead, hazy near the horizon, with a sun and clouds.
+      var sc = makeCanvas(8, 512), sg = sc.getContext('2d');
+      var sgr = sg.createLinearGradient(0, 0, 0, 512);
+      sgr.addColorStop(0, '#2d7bd8');
+      sgr.addColorStop(0.3, '#5ea6ea');
+      sgr.addColorStop(0.46, '#b9ddf5');
+      sgr.addColorStop(0.5, '#e2f1fa');
+      sgr.addColorStop(0.52, '#9ab88a');
+      sgr.addColorStop(1, '#4f7a3f');
+      sg.fillStyle = sgr;
+      sg.fillRect(0, 0, 8, 512);
+      var skyTex = new T3.CanvasTexture(sc);
+      skyTex.encoding = T3.sRGBEncoding;
+      var sky = new T3.Mesh(new T3.SphereGeometry(40000, 48, 24),
+        new T3.MeshBasicMaterial({ map: skyTex, side: T3.BackSide, fog: false, depthWrite: false }));
+      sky.renderOrder = -1;
+      group.add(sky);
+      var sunGlow = new T3.Sprite(new T3.SpriteMaterial({ map: glowTex, color: 0xfff4d6, fog: false, depthWrite: false, transparent: true, blending: T3.AdditiveBlending }));
+      sunGlow.scale.set(6000, 6000, 1);
+      sunGlow.position.copy(SUN).multiplyScalar(30000);
+      group.add(sunGlow);
+      var cloudTex = makeCloud();
+      for (var i = 0; i < 18; i++) {
+        var ca = (i / 18) * Math.PI * 2 + rnd() * 0.3;
+        var el = ((5 + rnd() * 22) * Math.PI) / 180;
+        var cd = 26000 + rnd() * 7000;
+        var cloud = new T3.Sprite(new T3.SpriteMaterial({ map: cloudTex, fog: false, depthWrite: false, transparent: true, opacity: 0.7 + rnd() * 0.3 }));
+        var cw = 5000 + rnd() * 7000;
+        cloud.scale.set(cw, cw * 0.45, 1);
+        cloud.position.set(Math.cos(ca) * Math.cos(el) * cd, Math.sin(el) * cd, Math.sin(ca) * Math.cos(el) * cd);
+        group.add(cloud);
+      }
+
+      // Outfield, pitch and creases.
+      var grassR = FIELD_R + 6 * M;
+      var grass = new T3.Mesh(new T3.CircleGeometry(grassR, 160),
+        new T3.MeshStandardMaterial({ map: makeOutfield(grassR, STUMPS_Z), roughness: 0.95 }));
+      grass.rotation.x = -Math.PI / 2;
+      grass.position.y = -0.5;
+      grass.receiveShadow = true;
+      group.add(grass);
+      var pitchTex = makePitchDetail();
+      pitchTex.repeat.set(PITCH_W / (0.42 * M), PITCH_L / (0.42 * M));
+      var pitch = new T3.Mesh(new T3.PlaneGeometry(PITCH_W, PITCH_L),
+        new T3.MeshStandardMaterial({ map: pitchTex, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+      pitch.rotation.x = -Math.PI / 2;
+      pitch.receiveShadow = true;
+      group.add(pitch);
+      var creaseMat = new T3.MeshStandardMaterial({ color: 0xf7f5ef, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      function crease(w, l, x, z) {
+        var m = new T3.Mesh(new T3.PlaneGeometry(w, l), creaseMat);
+        m.rotation.x = -Math.PI / 2;
+        m.position.set(x, 0.15, z);
+        m.receiveShadow = true;
+        group.add(m);
+      }
+      var LINE = 0.05 * M;
+      [-1, 1].forEach(function (end) {
+        var popping = end * (STUMPS_Z - 1.22 * M);
+        crease(2.64 * M, LINE, 0, end * STUMPS_Z);
+        crease(PITCH_W, LINE, 0, popping);
+        [-1, 1].forEach(function (side) {
+          crease(LINE, 2.44 * M, side * 1.32 * M, popping + end * 1.22 * M);
+        });
+      });
+
+      // Stumps and bails at both ends: 71.1 cm tall, 22.86 cm across.
+      var wood = new T3.MeshStandardMaterial({ color: 0xefe3c1, roughness: 0.42 });
+      var stumpGeo = new T3.CylinderGeometry(0.0175 * M, 0.0175 * M, 0.711 * M, 16);
+      var bailGeo = new T3.CylinderGeometry(0.008 * M, 0.008 * M, 0.1095 * M, 10);
+      [-1, 1].forEach(function (end) {
+        [-1, 0, 1].forEach(function (n) {
+          var s = new T3.Mesh(stumpGeo, wood);
+          s.position.set(n * 0.0968 * M, (0.711 * M) / 2, end * STUMPS_Z);
+          group.add(s);
+        });
+        [-1, 1].forEach(function (n) {
+          var b = new T3.Mesh(bailGeo, wood);
+          b.rotation.z = Math.PI / 2;
+          b.position.set(n * 0.0484 * M, 0.711 * M + 0.008 * M, end * STUMPS_Z);
+          group.add(b);
+        });
+      });
+
+      // Boundary rope, advertising boards and sight screens.
+      var rope = new T3.Mesh(new T3.TorusGeometry(FIELD_R, 0.07 * M, 8, 360), new T3.MeshStandardMaterial({ color: 0xf1ede2, roughness: 0.7 }));
+      rope.rotation.x = Math.PI / 2;
+      rope.position.y = 0.07 * M;
+      group.add(rope);
+      var boards = new T3.Mesh(new T3.CylinderGeometry(FIELD_R + 3.5 * M, FIELD_R + 3.5 * M, 1 * M, 180, 1, true),
+        new T3.MeshBasicMaterial({ map: makeBoards(), side: T3.DoubleSide }));
+      boards.position.y = 0.5 * M;
+      group.add(boards);
+      var screenMat = new T3.MeshStandardMaterial({ color: 0xf6f6f1, roughness: 0.9 });
+      [-1, 1].forEach(function (end) {
+        var screen = new T3.Mesh(new T3.BoxGeometry(24 * M, 8 * M, 0.4 * M), screenMat);
+        screen.position.set(0, 4 * M, end * (FIELD_R + 4.8 * M));
+        group.add(screen);
+      });
+
+      // Stands in two tiers, a roof and four floodlight towers.
+      var inner = FIELD_R + 6 * M, outer = FIELD_R + 40 * M;
+      var lower = new T3.Mesh(new T3.CylinderGeometry(outer, inner, 24 * M, 160, 1, true),
+        new T3.MeshStandardMaterial({ map: makeCrowd(false), side: T3.BackSide, roughness: 1 }));
+      lower.position.y = 13.2 * M;
+      group.add(lower);
+      var concourse = new T3.Mesh(new T3.CylinderGeometry(outer, outer, 2.2 * M, 160, 1, true),
+        new T3.MeshStandardMaterial({ color: 0x2e343c, side: T3.DoubleSide, roughness: 1 }));
+      concourse.position.y = 26.2 * M;
+      group.add(concourse);
+      var upper = new T3.Mesh(new T3.CylinderGeometry(outer + 16 * M, outer, 15 * M, 160, 1, true),
+        new T3.MeshStandardMaterial({ map: makeCrowd(true), side: T3.BackSide, roughness: 1 }));
+      upper.position.y = 34.7 * M;
+      group.add(upper);
+      var roofY = 47.2 * M;
+      var roof = new T3.Mesh(new T3.RingGeometry(outer + 4 * M, outer + 30 * M, 160, 1),
+        new T3.MeshStandardMaterial({ color: 0x59636c, side: T3.DoubleSide, roughness: 0.8 }));
+      roof.rotation.x = Math.PI / 2;
+      roof.position.y = roofY;
+      group.add(roof);
+      var fascia = new T3.Mesh(new T3.CylinderGeometry(outer + 4 * M, outer + 4 * M, 2.4 * M, 160, 1, true),
+        new T3.MeshStandardMaterial({ color: 0xe9eef1, side: T3.DoubleSide, roughness: 0.6 }));
+      fascia.position.y = roofY - 1.2 * M;
+      group.add(fascia);
+      var poleMat = new T3.MeshStandardMaterial({ color: 0xb9c1c8, roughness: 0.6, metalness: 0.3 });
+      var headMat = new T3.MeshBasicMaterial({ map: makeLampGrid() });
+      [45, 135, 225, 315].forEach(function (deg) {
+        var a = (deg * Math.PI) / 180, r = outer + 22 * M, h = 70 * M;
+        var pole = new T3.Mesh(new T3.CylinderGeometry(0.6 * M, 1 * M, h, 12), poleMat);
+        pole.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
+        group.add(pole);
+        var head = new T3.Mesh(new T3.BoxGeometry(12 * M, 8 * M, 0.8 * M), headMat);
+        head.position.set(Math.cos(a) * r, h + 3 * M, Math.sin(a) * r);
+        head.lookAt(0, h * 0.4, 0);
+        group.add(head);
+      });
+
+      // Sunlight. Its shadow box follows the coin and the spot its shadow falls on.
+      group.add(new T3.HemisphereLight(0xd2e8ff, 0x5b8a3c, 0.55));
+      var sun = new T3.DirectionalLight(0xfff2da, 1.6);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.near = 1;
+      sun.shadow.camera.far = 900;
+      sun.shadow.bias = -0.0005;
+      group.add(sun, sun.target);
+      var shadowAt = new T3.Vector3(), mid = new T3.Vector3();
+      function update() {
+        var c = coin.position;
+        shadowAt.set(c.x - (SUN.x * c.y) / SUN.y, 0, c.z - (SUN.z * c.y) / SUN.y);
+        mid.copy(c).add(shadowAt).multiplyScalar(0.5);
+        var half = 5 + c.distanceTo(shadowAt) * 0.55;
+        sun.target.position.copy(mid);
+        sun.position.copy(mid).addScaledVector(SUN, 400);
+        var cam = sun.shadow.camera;
+        if (cam.right !== half) {
+          cam.left = -half;
+          cam.right = half;
+          cam.top = half;
+          cam.bottom = -half;
+          cam.updateProjectionMatrix();
+        }
+      }
+
+      // What the coin reflects out here: open sky, the stands, the grass, the sun.
+      var env = new T3.Scene();
+      env.add(gradientSphere([[0, '#9bb8d6'], [0.38, '#c8d9e8'], [0.47, '#e9eff3'], [0.49, '#6d737a'], [0.52, '#86937a'], [1, '#6c7a60']]));
+      var sunDisk = new T3.Mesh(new T3.CircleGeometry(1.4, 24), new T3.MeshBasicMaterial({ color: new T3.Color(14, 12.5, 10) }));
+      sunDisk.position.copy(SUN).multiplyScalar(9);
+      sunDisk.lookAt(0, 0, 0);
+      env.add(sunDisk);
+
+      scene.add(group);
+      return {
+        group: group, env: bakeEnv(env), fog: new T3.FogExp2(0xcfe2ec, 0.000045),
+        background: new T3.Color(0x9fd0f0), near: 0.3, far: 60000, exposure: 0.95,
+        intro: function () { return new T3.Vector3(18, 70, 460); },
+        toss: { h: 45, hr: 25, t: 2.3, tr: 0.5 }, flightRate: 8, update: update, surface: 'pitch'
+      };
+    }
+
+    var WORLDS = {
+      table: {
+        group: tableWorld, env: tableEnv, fog: scene.fog, background: scene.background, near: 0.05, far: 500, exposure: 1.05,
+        intro: function () { var f = framing(); return new T3.Vector3(0, 11 * f, 11 * f); },
+        toss: { h: 18, hr: 8, t: 1.95, tr: 0.45 }, flightRate: 5.5, update: null, surface: 'table'
+      },
+      ground: null
+    };
+    var activeWorld = WORLDS.table;
+    function setScene(name, withIntro) {
+      if (name === 'ground' && !WORLDS.ground) WORLDS.ground = buildGround();
+      var w = WORLDS[name] || WORLDS.table;
+      Object.keys(WORLDS).forEach(function (key) {
+        if (WORLDS[key]) WORLDS[key].group.visible = WORLDS[key] === w;
+      });
+      scene.environment = w.env;
+      scene.fog = w.fog;
+      scene.background = w.background;
+      camera.near = w.near;
+      camera.far = w.far;
+      camera.updateProjectionMatrix();
+      activeWorld = w;
+      document.body.classList.toggle('scene-ground', w !== WORLDS.table);
+      if (withIntro) {
+        camPos.copy(w.intro()).add(coin.position);
+        camLook.copy(coin.position);
+      }
     }
 
     /* ================= Sound ================= */
@@ -1045,8 +1884,9 @@
       // With suspense on, the flip aims at either face at random. The coin then stands up
       // on its edge, and the way it finally tips over lands it on the result face.
       var aimFace = suspense ? (rnd() < 0.5 ? 'H' : 'T') : face;
-      var H = reduceMotion ? 5.5 + rnd() * 1.5 : 18 + rnd() * 8;
-      var T = reduceMotion ? 1.15 : 1.95 + ((H - 18) / 8) * 0.45;
+      var P0 = activeWorld.toss;
+      var H = reduceMotion ? 5.5 + rnd() * 1.5 : P0.h + rnd() * P0.hr;
+      var T = reduceMotion ? 1.15 : P0.t + ((H - P0.h) / P0.hr) * P0.tr;
       var d1 = 0.5 + rnd() * 0.25;
       var d2 = 0.2 + rnd() * 0.12;
       var y0 = REST_Y;
@@ -1300,7 +2140,7 @@
         var yOff = lerp(-1.8, 2.8, smoothRange(0.3, 0.8, s));
         wantPos.set(c.x + Math.sin(orbit) * dist, c.y + yOff, c.z + Math.cos(orbit) * dist);
         wantLook.copy(c);
-        rateP = 5.5; rateL = 22; fov += 10;
+        rateP = activeWorld.flightRate; rateL = 22; fov += 10;
       } else if (phase === 'stand' || phase === 'spin' || phase === 'roll') {
         // Down at table level, where nobody can tell which way it will fall.
         var S = toss.susp;
@@ -1360,8 +2200,7 @@
 
     // Open on a slow settle into the resting view.
     camFov = baseFov();
-    camPos.set(0, 11 * framing(), 11 * framing());
-    camLook.set(0, 0, 0);
+    setScene(state.scene, true);
 
     var last = performance.now();
     function frame(now) {
@@ -1370,12 +2209,13 @@
       clock += dt;
       updateCoin(dt);
       updateCamera(dt);
-      updateDust(dt);
+      if (activeWorld === WORLDS.table) updateDust(dt);
+      if (activeWorld.update) activeWorld.update(dt);
       // While the coin spins on its edge: the room dims, the beam brightens and a soft
       // light from the camera side lets you catch each face as it turns past.
       var tenseNow = phase === 'stand' || phase === 'spin' || phase === 'roll';
       tension += ((tenseNow ? 1 : 0) - tension) * (1 - Math.exp(-2.5 * dt));
-      renderer.toneMappingExposure = 1.05 - 0.14 * tension;
+      renderer.toneMappingExposure = activeWorld.exposure - 0.14 * tension;
       beam.material.uniforms.uStrength.value = 0.13 + 0.08 * tension;
       faceLight.intensity = 0.9 * tension;
       faceLight.position.set(camera.position.x, camera.position.y + 1.5, camera.position.z);
@@ -1386,8 +2226,33 @@
 
     /* ================= Interface ================= */
     var resultEl = $('result'), tossBtn = $('tossBtn'), hintEl = $('hint');
+    var lookBtn = $('lookBtn'), lookPanel = $('lookPanel');
     var NAMES = { H: 'Heads', T: 'Tails' };
-    var IDLE_HINT = 'Tap the table or press Space to toss';
+    var SCENE_NAMES = { table: 'Table', ground: 'Ground' };
+
+    function hintText() {
+      return 'Tap the ' + activeWorld.surface + ' or press Space to toss';
+    }
+
+    function renderLook() {
+      $('lookLabel').textContent = SCENE_NAMES[state.scene] + ' · ' + COIN_TYPES[state.coin].label;
+      Array.prototype.forEach.call(lookPanel.querySelectorAll('[data-scene]'), function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.scene === state.scene));
+      });
+      Array.prototype.forEach.call(lookPanel.querySelectorAll('[data-coin]'), function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.coin === state.coin));
+      });
+    }
+
+    function openLook(open) {
+      if (open) {
+        var r = lookBtn.getBoundingClientRect();
+        lookPanel.style.top = Math.round(r.bottom + 8) + 'px';
+        lookPanel.style.left = Math.round(r.left) + 'px';
+      }
+      lookPanel.hidden = !open;
+      lookBtn.setAttribute('aria-expanded', String(open));
+    }
 
     function renderTally() {
       $('nH').textContent = state.counts.H;
@@ -1418,6 +2283,8 @@
     }
 
     function onLaunchUI() {
+      openLook(false);
+      lookBtn.disabled = true;
       resultEl.classList.remove('show');
       tossBtn.disabled = true;
       tossBtn.textContent = 'In the air';
@@ -1446,7 +2313,7 @@
       while (streak < state.history.length && state.history[streak] === face) streak++;
       var total = state.counts.H + state.counts.T;
 
-      $('resEyebrow').textContent = face === 'H' ? 'Crossed bats side up' : 'Stumps side up';
+      $('resEyebrow').textContent = COIN_TYPES[state.coin].sides[face];
       $('resWord').textContent = NAMES[face];
       $('resMeta').textContent = 'Toss ' + total + ' · peak ' + Math.round(t.H * UNIT_CM) + ' cm · ' + turnsLabel(t.turns) + ' turns' +
         (streak >= 2 ? ' · ' + streak + ' in a row' : '');
@@ -1465,17 +2332,26 @@
       resultEl.classList.add('show');
       tossBtn.disabled = false;
       tossBtn.textContent = 'Toss again';
-      hintEl.textContent = IDLE_HINT;
+      lookBtn.disabled = false;
+      hintEl.textContent = hintText();
       renderTally();
     }
 
     tossBtn.addEventListener('click', startToss);
     canvas.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (!lookPanel.hidden) {
+        openLook(false);
+        return;
+      }
       startToss();
     });
     window.addEventListener('keydown', function (e) {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Escape') {
+        openLook(false);
+        return;
+      }
       var onButton = e.target && e.target.closest && e.target.closest('button');
       if ((e.code === 'Space' || e.key === 'Enter') && !onButton) {
         e.preventDefault();
@@ -1508,10 +2384,36 @@
       resultEl.classList.remove('show');
     });
 
+    lookBtn.addEventListener('click', function () {
+      openLook(lookPanel.hidden);
+    });
+    Array.prototype.forEach.call(lookPanel.querySelectorAll('[data-scene]'), function (b) {
+      b.addEventListener('click', function () {
+        if (phase !== 'idle' || state.scene === b.dataset.scene) return;
+        state.scene = b.dataset.scene;
+        setScene(state.scene, true);
+        persist();
+        renderLook();
+        resultEl.classList.remove('show');
+        hintEl.textContent = hintText();
+      });
+    });
+    Array.prototype.forEach.call(lookPanel.querySelectorAll('[data-coin]'), function (b) {
+      b.addEventListener('click', function () {
+        if (phase !== 'idle' || state.coin === b.dataset.coin) return;
+        state.coin = b.dataset.coin;
+        applyCoin(state.coin);
+        persist();
+        renderLook();
+        resultEl.classList.remove('show');
+      });
+    });
+
     renderTally();
     renderCall();
     renderSound();
-    hintEl.textContent = IDLE_HINT;
+    renderLook();
+    hintEl.textContent = hintText();
   }
 })();
 </script>
